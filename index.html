@@ -11,7 +11,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons -->
+    <!-- Phosphor Icons (改用 CSS 載入，GitHub Pages 更穩定) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <!-- Google Font -->
@@ -119,7 +119,6 @@
                 <div class="flex bg-slate-200 p-1 rounded-full relative mb-6">
                     <div class="w-1/2 h-full absolute bg-white rounded-full shadow-sm transition-all duration-300 transform"
                          :class="viewMode === 'upcoming' ? 'translate-x-0' : 'translate-x-full'"></div>
-                    <!-- 按鈕文字顏色強制綁定 -->
                     <button @click="viewMode = 'upcoming'" class="flex-1 py-2 text-sm font-medium z-10 transition-colors duration-300 text-center"
                             :style="{ color: viewMode === 'upcoming' ? themeColor : '' }"
                             :class="viewMode === 'upcoming' ? '' : 'text-slate-500'">
@@ -146,7 +145,6 @@
                         {{ viewMode === 'upcoming' ? '快去買門票填滿行程吧！💸' : '時間會把現在變成最棒的歷史' }}
                     </p>
 
-                    <!-- 新增按鈕邊框和文字顏色強制綁定 -->
                     <button @click="openModal()" 
                             :style="{ color: themeColor, borderColor: themeColor }"
                             class="bg-white border-2 px-6 py-2 rounded-full font-bold shadow-sm active:scale-95 transition-transform text-sm flex items-center gap-2">
@@ -163,7 +161,6 @@
                         
                         <!-- Main Card Content -->
                         <div class="p-5 cursor-pointer relative" @click="toggleExpand(event.id)">
-                            <!-- Decoration Line -->
                             <div class="absolute left-0 top-0 bottom-0 w-1.5" :style="{ backgroundColor: getEventColor(event) }"></div>
 
                             <div class="flex justify-between items-start mb-3 pl-2">
@@ -230,11 +227,8 @@
                             </div>
                         </div>
 
-                        <!-- Expanded Detail -->
                         <transition name="expand">
                             <div v-if="expandedEventId === event.id" class="bg-slate-50 border-t border-slate-100 px-6 py-4 overflow-hidden">
-                                
-                                <!-- Checklist -->
                                 <div class="mb-4">
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                                         <i class="ph ph-check-square"></i> 出發前檢查
@@ -247,8 +241,6 @@
                                     </div>
                                     <div v-else class="text-xs text-slate-400 italic">無清單，編輯行程可新增</div>
                                 </div>
-
-                                <!-- Memo -->
                                 <div class="mb-4" v-if="event.memo">
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                                         <i class="ph ph-notebook"></i> 心得筆記
@@ -257,8 +249,6 @@
                                         {{ event.memo }}
                                     </div>
                                 </div>
-
-                                <!-- Expenses -->
                                 <div>
                                     <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                                         <i class="ph ph-receipt"></i> 花費明細
@@ -274,7 +264,6 @@
                                 </div>
                             </div>
                         </transition>
-
                     </div>
                 </transition-group>
             </div>
@@ -282,10 +271,14 @@
             <!-- Tab: Stats -->
             <div v-if="activeTab === 'stats'" class="space-y-6">
                 
-                <div class="flex justify-between items-end mb-2">
+                <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
-                    <button @click="showImportModal = true" class="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full flex items-center gap-1">
-                        <i class="ph ph-download-simple"></i> 匯入
+                    
+                    <!-- 匯入按鈕修復 -->
+                    <button @click="showImportModal = true" 
+                            :style="{ backgroundColor: themeColor }"
+                            class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
+                        <i class="ph ph-download-simple text-lg"></i> 匯入
                     </button>
                 </div>
 
@@ -301,7 +294,6 @@
                     </div>
                 </div>
 
-                <!-- Summary Cards -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-2xl border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">累計場次</div>
@@ -309,14 +301,13 @@
                     </div>
                     <div class="bg-gradient-to-br from-primary/10 to-primary/5 p-4 rounded-2xl border border-primary/20">
                         <div class="text-xs text-primary-dark mb-1">累計投資</div>
-                        <!-- 強制綁定金額顏色 -->
+                        <!-- 累計投資顏色修復：強制綁定並移除干擾 class -->
                         <div class="text-2xl font-bold" :style="{ color: themeColor }">
                              {{ isPrivacyMode ? '****' : '$' + formatMoney(statsData.totalSpent) }}
                         </div>
                     </div>
                 </div>
 
-                <!-- Top 3 Artists -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div class="flex justify-between items-center mb-4">
                          <h3 class="font-bold text-slate-800 flex items-center gap-2">
@@ -346,7 +337,6 @@
                     </div>
                 </div>
 
-                <!-- Series Count -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="font-bold text-slate-800 flex items-center gap-2">
@@ -372,7 +362,7 @@
             </div>
         </main>
 
-        <!-- FAB: 強制綁定背景色 -->
+        <!-- FAB -->
         <button @click="openModal()" 
             :style="{ backgroundColor: themeColor }"
             class="absolute bottom-24 right-6 w-14 h-14 text-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center transform transition-transform hover:scale-110 active:scale-95 z-20">
@@ -410,7 +400,6 @@
                     </div>
 
                     <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32">
-                        <!-- Basic Info Section -->
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label>
@@ -430,7 +419,6 @@
                                 </div>
                             </div>
 
-                            <!-- Seat Info -->
                              <div>
                                 <label class="block text-sm font-medium text-slate-500 mb-1">座位/序號 (選填)</label>
                                 <div class="relative">
@@ -461,11 +449,10 @@
 
                         <hr class="border-slate-100 my-2">
 
-                        <!-- Checklist -->
                         <div>
                             <div class="flex justify-between items-center mb-2">
                                 <label class="block text-sm font-medium text-slate-700">必帶清單 ✅</label>
-                                <button @click="addDefaultChecklist" class="text-xs text-primary hover:underline">加入常用項目</button>
+                                <button @click="addDefaultChecklist" class="text-xs text-primary hover:underline" :style="{color: themeColor}">加入常用項目</button>
                             </div>
                             <div class="space-y-2 mb-2">
                                 <div v-for="(item, index) in form.checklist" :key="index" class="flex gap-2 items-center">
@@ -478,10 +465,8 @@
 
                         <hr class="border-slate-100 my-2">
 
-                        <!-- Accounting -->
                         <div>
                             <div class="flex justify-between items-center mb-2">
-                                <!-- 強制綁定金額顏色 -->
                                 <label class="block text-sm font-medium text-slate-700">詳細支出記帳 💰</label>
                                 <span class="text-xs font-bold" :style="{ color: themeColor }">總計: ${{ formatMoney(calculateTotal(form.expenses)) }}</span>
                             </div>
@@ -504,7 +489,6 @@
 
                         <hr class="border-slate-100 my-2">
 
-                        <!-- Memo -->
                          <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">心得筆記 📝</label>
                             <textarea v-model="form.memo" placeholder="寫下你的應援心情、觀後感..." class="w-full h-24 bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/50 text-slate-800 resize-none"></textarea>
@@ -513,7 +497,6 @@
                     </div>
 
                     <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
-                        <!-- 強制綁定按鈕背景色 -->
                         <button @click="saveEvent" 
                                 :style="{ backgroundColor: themeColor }"
                                 class="w-full text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -525,11 +508,10 @@
             </div>
         </transition>
 
-        <!-- Global Theme Modal -->
+        <!-- Theme Modal -->
         <div v-if="showThemeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showThemeModal = false">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
                 <h3 class="font-bold text-lg mb-4 text-slate-700">APP 全域主題色 🎨</h3>
-                <p class="text-xs text-slate-400 mb-4">改變標題、按鈕等介面顏色 (不影響單場應援色)</p>
                 <div class="grid grid-cols-4 gap-3 mb-6">
                     <button v-for="color in presetColors" :key="color" 
                         @click="setTheme(color)"
@@ -554,7 +536,10 @@
                 <textarea v-model="importJson" class="w-full h-40 bg-slate-50 border rounded-xl p-3 text-xs font-mono mb-4 leading-relaxed" placeholder='[{"日期": 230422, "歌手": "Taemin", "活動名稱": "RE : ACT", "地點": "首爾"}]'></textarea>
                 <div class="flex gap-2">
                     <button @click="showImportModal = false" class="flex-1 py-2 text-slate-500">取消</button>
-                    <button @click="processImport" class="flex-1 bg-primary text-white py-2 rounded-lg font-bold">匯入</button>
+                    <!-- 匯入按鈕修復：強制變色 -->
+                    <button @click="processImport" 
+                            :style="{ backgroundColor: themeColor }"
+                            class="flex-1 text-white py-2 rounded-lg font-bold shadow-sm">匯入</button>
                 </div>
             </div>
         </div>
@@ -609,7 +594,6 @@
                 watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
                 watch(themeColor, (newVal) => localStorage.setItem('idolTheme', newVal));
 
-                // Color Helper
                 const adjustColor = (color, amount) => {
                     let hex = color.replace('#', '');
                     if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
@@ -747,30 +731,55 @@
 
                 const toggleThemeModal = () => showThemeModal.value = !showThemeModal.value;
 
+                // ** 匯入日期邏輯修復 **
                 const processImport = () => {
                     try {
                         const data = JSON.parse(importJson.value);
                         if (Array.isArray(data)) {
                             const newEvts = data.map(d => {
-                                let date = new Date().toISOString().split('T')[0];
-                                if(d.date) {
-                                    const s = String(d.date).trim();
-                                    if(/^\d{6}$/.test(s)) date = `20${s.substring(0,2)}-${s.substring(2,4)}-${s.substring(4,6)}`;
-                                    else if(s.includes('-')) date = s;
+                                let title = d.title || d['活動名稱'] || '未命名活動';
+                                let artist = d.artist || d['歌手'] || '';
+                                let location = d.location || d['地點'] || '';
+                                let time = d.time || d['時間'] || '00:00';
+                                let color = d.color || d['應援色'] || ''; 
+                                let seat = d.seat || d['座位'] || '';
+                                let memo = d.memo || d['心得'] || '';
+                                
+                                // 日期解析增強
+                                let rawDate = d.date || d['日期'] || '';
+                                // 預設今天
+                                let formattedDate = new Date().toISOString().split('T')[0];
+                                
+                                if (rawDate) {
+                                    const str = String(rawDate).trim();
+                                    // 230422 (6位數)
+                                    if (/^\d{6}$/.test(str)) {
+                                        formattedDate = `20${str.substring(0, 2)}-${str.substring(2, 4)}-${str.substring(4, 6)}`;
+                                    } 
+                                    // 20230422 (8位數)
+                                    else if (/^\d{8}$/.test(str)) {
+                                        formattedDate = `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
+                                    } 
+                                    // 2023/04/22 or 2023-04-22
+                                    else if (str.includes('-') || str.includes('/')) {
+                                        formattedDate = str.replace(/\//g, '-'); 
+                                    }
                                 }
-                                let exp = [];
-                                if(d.price > 0) exp.push({item:'門票', amount:d.price});
-                                return {
-                                    id: Date.now()+Math.random(), title: d.title||d['活動名稱']||'未命名', 
-                                    artist: d.artist||d['歌手']||'', date, time: d.time||'00:00', 
-                                    location: d.location||d['地點']||'', color: d.color||'', 
-                                    seat: d.seat||'', memo: d.memo||'', expenses: exp, checklist: []
+
+                                let expenses = [];
+                                let price = d.price || d['票價'] || d['金額'] || 0;
+                                if (price > 0) expenses.push({ item: '門票', amount: price });
+
+                                return { 
+                                    id: Date.now() + Math.random().toString(), 
+                                    title, artist, date: formattedDate, time, location, color, 
+                                    expenses, seat, memo, checklist: [] 
                                 };
                             });
                             events.value = [...events.value, ...newEvts];
                             showImportModal.value = false;
                             alert(`成功匯入 ${newEvts.length} 筆！`);
-                        }
+                        } else { alert('格式錯誤：必須是陣列 (Array)'); }
                     } catch(e) { alert('JSON 格式錯誤'); }
                 };
 
