@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追星行程規劃與記帳</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth;
+        let unsubscribe = null; // for onSnapshot listener
+
+        const { createApp, ref, computed, watch } = Vue;
+
+        const EventTracker = {
+            setup() {
+                // --- 狀態管理 ---
+                const isAuthReady = ref(false);
+                const userId = ref(null);
+                const loading = ref(true);
+                const events = ref([]);
+                const activeEventId = ref(null);
+                const activeTab = ref('schedule'); // 預設為 'schedule'，但點擊列表時會變為 'info'
+                const selectedReviewYear = ref('all'); // NEW: 追星年報篩選器
+
+                // CSV Import States
+                const selectedFile = ref(null);
+                const isImporting = ref(false);
+                const showImportModal = ref(false); 
+
+                // Review State
+                const showExclusionDisclaimer = ref(false); // NEW: State for disclaimer visibility
+
+                // Form States
+                const newEventName = ref('');
+                const newArtistName = ref('');
+                const showEventModal = ref(false);
+                
+                // 新增: 活動日期和地點
+                const newEventDate = ref('');
+                const newEventLocation = ref('');
+
+                const newSchedule = ref({ time: '09:00', location: '', description: '' });
+                const newExpense = ref({ description: '', amount: 0, payer: '我', participants: ['我'] });
+                
+                // 新增用於手動管理參與者
+                const newParticipant = ref('');
+
+                // --- Computed 屬性 ---
+                
+                // 獲取今天的日期 (YYYY-MM-DD 格式)
+                const today = computed(() => new Date().toISOString().split('T')[0]);
+
+                const currentEvent = computed(() => {
+                    return events.value.find(e => e.id === activeEventId.value);
+                });
+
+                const eventYears = computed(() => {
+                    return [...new Set(events.value.map(e => e.year))].sort((a, b) => b - a);
+                });
+                
+                // 計算屬性：待進行程 (日期 >= 今天)
+                const upcomingEvents = computed(() => {
+                    return events.value.filter(e => e.date && e.date >= today.value).sort((a, b) => a.date.localeCompare(b.date));
+                });
+
+                // 計算屬性：過去行程 (日期 < 今天)
+                const pastEvents = computed(() => {
+                    // 過去行程按日期由新到舊排序
+                    return events.value.filter(e => e.date && e.date < today.value).sort((a, b) => b.date.localeCompare(a.date));
+                });
+
+
+                const mapLink = computed(() => {
+                    const event = currentEvent.value;
+                    if (!event) return null;
+
+                    let locationToSearch = '';
+                    let sourceText = '';
+
+                    // 1. 優先使用主要活動地點 (UPDATED LOGIC: 使用者要求)
+                    if (event.mainLocation) {
+                        locationToSearch = event.mainLocation;
+                        sourceText = '主要地點';
+                    } 
+                    // 2. 其次使用最後一個每日行程地點
+                    else if (event.dailyItems && event.dailyItems.length > 0 && event.dailyItems[event.dailyItems.length - 1].location) {
+                        locationToSearch = event.dailyItems[event.dailyItems.length - 1].location;
+                        sourceText = '最後一站';
+                    }
+
+                    if (locationToSearch) {
+                        // 導航功能簡化為 Google Maps 搜尋連結
+                        return {
+                            url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationToSearch)}`,
+                            source: sourceText
+                        };
+                    }
+                    return null;
+                });
+
+                // --- Review/Stats Logic ---
+                
+                // NEW: All events attended within the selected scope (for Detailed List)
+                const eventsInSelectedScope = computed(() => {
+                    return events.value.filter(event => 
+                        selectedReviewYear.value === 'all' || event.year === parseInt(selectedReviewYear.value)
+                    ).sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
+                });
+
+                // NEW: Events that count towards achievements (filtered list for ranking/repetition)
+                const achievementsEvents = computed(() => {
+                    const EXCLUDED_KEYWORDS = ['사전녹화', '事前錄製', '簽售會', '簽名會', '錄製'];
+                    
+                    // 1. Filter events based on selected scope
+                    const eventsToFilter = eventsInSelectedScope.value;
+
+                    // 2. Filter out non-main events
+                    return eventsToFilter.filter(event => 
+                        !EXCLUDED_KEYWORDS.some(keyword => event.eventName && event.eventName.includes(keyword))
+                    );
+                });
+
+                // UPDATED overallStats to use the new computed properties
+                const overallStats = computed(() => {
+                    const eventList = achievementsEvents.value; // Use filtered list for rankings/uniqueness
+                    const totalEventsAll = eventsInSelectedScope.value.length; // Use all events for total count
+                    
+                    if (eventList.length === 0) {
+                        return {
+                            totalEventsAll: totalEventsAll,
+                            totalEventsFiltered: 0,
+                            uniqueArtists: 0,
+                            artistBreakdown: [],
+                            eventRepetitionBreakdown: [],
+                        };
+                    }
+                    
+                    const totalEventsFiltered = eventList.length;
+                    const artists = {};
+                    const eventNames = {};
+                    
+                    for (const event of eventList) {
+                        const artist = event.artistName || '未知歌手';
+                        artists[artist] = (artists[artist] || 0) + 1;
+                        const eventName = event.eventName || '未知活動';
+                        eventNames[eventName] = (eventNames[eventName] || 0) + 1;
+                    }
+
+                    const uniqueArtists = Object.keys(artists).length;
+
+                    const artistBreakdown = Object.entries(artists)
+                        .map(([name, count]) => ({ name, count }))
+                        .sort((a, b) => b.count - a.count);
+
+                    const eventRepetitionBreakdown = Object.entries(eventNames)
+                        .map(([name, count]) => ({ name, count }))
+                        .filter(item => item.count > 1) 
+                        .sort((a, b) => b.count - a.count);
+
+                    return {
+                        totalEventsAll,
+                        totalEventsFiltered,
+                        uniqueArtists,
+                        artistBreakdown,
+                        eventRepetitionBreakdown,
+                    };
+                });
+
+                // --- 記帳邏輯 ---
+                const expenseSummary = computed(() => {
+                    const event = currentEvent.value;
+                    if (!event || !event.expenses || event.expenses.length === 0) {
+                        return { balances: {}, totalSpent: 0 };
+                    }
+
+                    // 使用當前行程的參與者名單
+                    const uniqueParticipants = [...new Set(event.participants || ['我'])];
+                    const balances = Object.fromEntries(uniqueParticipants.map(p => [p, 0]));
+                    let totalSpent = 0;
+
+                    for (const expense of event.expenses) {
+                        totalSpent += expense.amount;
+                        // 確保分攤人是有效參與者
+                        const validParticipants = expense.participants.filter(p => uniqueParticipants.includes(p));
+                        const share = expense.amount / validParticipants.length;
+
+                        // Payer gets credit
+                        // 確保付費人是有效參與者
+                        if (uniqueParticipants.includes(expense.payer)) {
+                            balances[expense.payer] += expense.amount;
+                        }
+
+                        // Everyone owes their share
+                        for (const participant of validParticipants) {
+                            balances[participant] -= share;
+                        }
+                    }
+
+                    // Format balances to 2 decimal places
+                    const formattedBalances = {};
+                    for (const [person, balance] of Object.entries(balances)) {
+                        formattedBalances[person] = parseFloat(balance.toFixed(2));
+                    }
+
+                    return { balances: formattedBalances, totalSpent: totalSpent };
+                });
+
+                const settlementInstructions = computed(() => {
+                    const { balances } = expenseSummary.value;
+                    let debtors = [];
+                    let creditors = [];
+                    const instructions = [];
+
+                    for (const [person, balance] of Object.entries(balances)) {
+                        if (balance < -0.01) { // Owes money (negative balance)
+                            debtors.push({ name: person, amount: Math.abs(balance) });
+                        } else if (balance > 0.01) { // Is owed money (positive balance)
+                            creditors.push({ name: person, amount: balance });
+                        }
+                    }
+
+                    // Simple settlement algorithm
+                    while (debtors.length > 0 && creditors.length > 0) {
+                        let debtor = debtors[0];
+                        let creditor = creditors[0];
+
+                        const transferAmount = Math.min(debtor.amount, creditor.amount);
+
+                        if (transferAmount > 0.01) {
+                            instructions.push({
+                                from: debtor.name,
+                                to: creditor.name,
+                                amount: parseFloat(transferAmount.toFixed(2))
+                            });
+                        }
+
+                        // Update balances
+                        debtor.amount -= transferAmount;
+                        creditor.amount -= transferAmount;
+
+                        // Remove settled accounts
+                        if (debtor.amount <= 0.01) {
+                            debtors.shift();
+                        }
+                        if (creditor.amount <= 0.01) {
+                            creditors.shift();
+                        }
+                    }
+
+                    return instructions;
+                });
+
+                // --- Firestore CRUD 函數 ---
+                const getEventCollectionRef = () => {
+                    const userDir = userId.value ? `/artifacts/${appId}/users/${userId.value}` : '';
+                    return collection(db, `${userDir}/schedules`);
+                };
+
+                const subscribeToEvents = () => {
+                    if (unsubscribe) {
+                        unsubscribe();
+                    }
+                    if (!userId.value) return;
+
+                    const eventsRef = getEventCollectionRef();
+                    unsubscribe = onSnapshot(eventsRef, (snapshot) => {
+                        const fetchedEvents = [];
+                        snapshot.forEach((doc) => {
+                            fetchedEvents.push({ id: doc.id, ...doc.data() });
+                        });
+                        events.value = fetchedEvents;
+                        loading.value = false;
+
+                        // 確保 newExpense 的參與者清單與 currentEvent.participants 同步
+                        if (currentEvent.value && currentEvent.value.participants.length > 0) {
+                             // 確保 newExpense.participants 只包含有效的參與者
+                            newExpense.value.participants = newExpense.value.participants.filter(p => currentEvent.value.participants.includes(p));
+                            // 如果 payer 被移除, 預設設為 '我'
+                            if (!currentEvent.value.participants.includes(newExpense.value.payer)) {
+                                newExpense.value.payer = '我';
+                            }
+                        }
+                    }, (error) => {
+                        console.error("Error fetching events:", error);
+                        loading.value = false;
+                    });
+                };
+
+                const handleAuth = async () => {
+                    try {
+                        app = initializeApp(firebaseConfig);
+                        db = getFirestore(app);
+                        auth = getAuth(app);
+                        // setLogLevel('Debug'); // Uncomment for debugging
+
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+
+                        onAuthStateChanged(auth, (user) => {
+                            if (user) {
+                                userId.value = user.uid;
+                                isAuthReady.value = true;
+                                subscribeToEvents();
+                            } else {
+                                console.log("User signed out or failed to sign in.");
+                                userId.value = null;
+                                isAuthReady.value = true;
+                                loading.value = false;
+                            }
+                        });
+                    } catch (error) {
+                        console.error("Firebase Initialization/Auth Error:", error);
+                        isAuthReady.value = true;
+                        loading.value = false;
+                    }
+                };
+
+                // --- CSV 匯入邏輯 ---
+                const convertYYMMDDToYYYYMMDD = (yyMMDD) => {
+                    if (yyMMDD.length !== 6) return '';
+                    const yy = yyMMDD.substring(0, 2);
+                    const mm = yyMMDD.substring(2, 4);
+                    const dd = yyMMDD.substring(4, 6);
+                    // 假設年份是 2000 年代，例如 23 -> 2023
+                    const year = '20' + yy;
+                    return `${year}-${mm}-${dd}`;
+                };
+                
+                const handleFileSelect = (event) => {
+                    const files = event.target.files;
+                    if (files.length > 0) {
+                        selectedFile.value = files[0];
+                    } else {
+                        selectedFile.value = null;
+                    }
+                };
+                
+                const importCSV = () => {
+                    if (!selectedFile.value || isImporting.value) return;
+                    isImporting.value = true;
+                    const reader = new FileReader();
+
+                    reader.onload = async (e) => {
+                        const csvText = e.target.result;
+                        const lines = csvText.trim().split('\n');
+                        
+                        if (lines.length < 2) {
+                            // Using a custom UI alert since window.alert() is forbidden
+                            console.error('錯誤：CSV檔案內容不足。');
+                            isImporting.value = false;
+                            return;
+                        }
+
+                        const header = lines[0].trim().split(',');
+                        const dataLines = lines.slice(1);
+                        let importedCount = 0;
+                        let errorCount = 0;
+
+                        // 根據標題找到欄位索引
+                        const dateIndex = header.indexOf('日期');
+                        const artistIndex = header.indexOf('歌手');
+                        const eventNameIndex = header.indexOf('活動名稱');
+                        const locationIndex = header.indexOf('地點');
+
+                        if (dateIndex === -1 || artistIndex === -1 || eventNameIndex === -1 || locationIndex === -1) {
+                             // Using a custom UI alert since window.alert() is forbidden
+                            console.error('錯誤：CSV標題不符合預期 (需包含：日期,歌手,活動名稱,地點)。');
+                            isImporting.value = false;
+                            return;
+                        }
+
+                        for (const line of dataLines) {
+                            if (!line.trim()) continue;
+
+                            // 使用正規表達式來處理雙引號內的逗號 (簡易 CSV 解析)
+                            const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim()); 
+
+                            if (values.length > Math.max(dateIndex, artistIndex, eventNameIndex, locationIndex)) {
+                                
+                                // 處理日期並轉換格式
+                                let rawDate = values[dateIndex].replace(/"/g, '').trim();
+                                let date = convertYYMMDDToYYYYMMDD(rawDate);
+                                let eventDate = new Date(date);
+
+                                if (!date || isNaN(eventDate)) {
+                                    errorCount++;
+                                    console.warn(`Skipping line due to invalid date: ${line}`);
+                                    continue;
+                                }
+                                
+                                // 清理欄位內容 (移除前後引號，並處理內部引號)
+                                let eventName = values[eventNameIndex].trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+                                let artistName = values[artistIndex].trim().replace(/"/g, '').trim();
+                                let mainLocation = values[locationIndex].trim().replace(/"/g, '').trim();
+
+                                const newEvent = {
+                                    eventName: eventName || '無活動名稱',
+                                    artistName: artistName || '無歌手',
+                                    year: eventDate.getFullYear(), 
+                                    date: date,
+                                    mainLocation: mainLocation || '未設定地點',
+                                    dailyItems: [],
+                                    expenses: [],
+                                    participants: ['我']
+                                };
+
+                                try {
+                                    await addDoc(getEventCollectionRef(), newEvent);
+                                    importedCount++;
+                                } catch (e) {
+                                    console.error("Error adding document during import: ", e);
+                                    errorCount++;
+                                }
+                            } else {
+                                 errorCount++;
+                                 console.warn(`Skipping line due to insufficient fields: ${line}`);
+                            }
+                        }
+
+                        isImporting.value = false;
+                        selectedFile.value = null; // 清空檔案選擇
+                        document.getElementById('csvFile').value = ''; // 重設檔案輸入
+                        showImportModal.value = false; // 關閉彈窗
+                        
+                        // Using a custom UI alert since window.alert() is forbidden
+                        console.log(`匯入完成！成功匯入 ${importedCount} 個行程。 (有 ${errorCount} 個行程因格式錯誤而被跳過)`);
+                    };
+
+                    reader.onerror = () => {
+                        isImporting.value = false;
+                        // Using a custom UI alert since window.alert() is forbidden
+                        console.error('檔案讀取失敗。');
+                    };
+
+                    // 嘗試用 UTF-8 解碼，以處理中文
+                    reader.readAsText(selectedFile.value, 'UTF-8');
+                };
+
+
+                // --- 數據操作 ---
+
+                const addEvent = async () => {
+                    if (!newEventName.value || !newArtistName.value || !newEventDate.value) return; // 要求日期為必填項
+                    if (!userId.value) {
+                        console.error("Authentication not ready.");
+                        return;
+                    }
+
+                    // 從日期字符串中提取年份
+                    const eventDate = new Date(newEventDate.value);
+                    const eventYear = eventDate.getFullYear();
+
+                    const newEvent = {
+                        eventName: newEventName.value,
+                        artistName: newArtistName.value,
+                        year: eventYear, // 使用從日期提取的年份
+                        date: newEventDate.value, 
+                        mainLocation: newEventLocation.value, 
+                        dailyItems: [],
+                        expenses: [],
+                        participants: ['我'] // 預設參與者為 '我'
+                    };
+
+                    try {
+                        const docRef = await addDoc(getEventCollectionRef(), newEvent);
+                        activeEventId.value = docRef.id;
+                        showEventModal.value = false;
+                        
+                        // 清空欄位
+                        newEventName.value = '';
+                        newArtistName.value = '';
+                        newEventDate.value = '';
+                        newEventLocation.value = '';
+                        
+                    } catch (e) {
+                        console.error("Error adding document: ", e);
+                    }
+                };
+
+                const deleteEvent = async (id) => {
+                    // Use console.log for confirmation in this environment instead of window.confirm
+                    if (confirm('確定要刪除這個行程嗎？此操作無法撤銷。')) { 
+                        try {
+                            await deleteDoc(doc(getEventCollectionRef(), id));
+                            
+                            // 刪除後清空 activeEventId，返回主列表
+                            if (activeEventId.value === id) {
+                                activeEventId.value = null;
+                            }
+                        } catch (e) {
+                            console.error("Error deleting document: ", e);
+                        }
+                    }
+                };
+
+                const updateEvent = async (updatedData) => {
+                    if (!currentEvent.value) return;
+                    try {
+                        const eventRef = doc(getEventCollectionRef(), activeEventId.value);
+                        // Use setDoc merge true to ensure only top-level fields are updated
+                        await setDoc(eventRef, updatedData, { merge: true });
+                    } catch (e) {
+                        console.error("Error updating document: ", e);
+                    }
+                };
+
+                // --- 參與者管理 ---
+                const addParticipant = async () => {
+                    const name = newParticipant.value.trim();
+                    if (!currentEvent.value || !name || currentEvent.value.participants.includes(name) || name === '') return;
+                    
+                    const updatedParticipants = [...currentEvent.value.participants, name];
+                    await updateEvent({ participants: updatedParticipants });
+                    newParticipant.value = '';
+                };
+
+                const removeParticipant = async (name) => {
+                    if (!currentEvent.value || name === '我') return; // 不能移除 '我'
+
+                    // Use console.log for confirmation in this environment instead of window.confirm
+                    if (confirm(`確定要將 ${name} 從參與者名單中移除嗎? 移除後，他的所有支出/分攤記錄將會被更新。`)) {
+                        const updatedParticipants = currentEvent.value.participants.filter(p => p !== name);
+                        
+                        // 清理相關支出記錄
+                        const updatedExpenses = currentEvent.value.expenses.map(exp => ({
+                            ...exp,
+                            // 如果移除者是付費人，改為 '我'
+                            payer: exp.payer === name ? '我' : exp.payer,
+                            // 從分攤人清單中移除
+                            participants: exp.participants.filter(p => p !== name),
+                        }));
+
+                        await updateEvent({ participants: updatedParticipants, expenses: updatedExpenses });
+                    }
+                };
+
+
+                // Schedule CRUD
+                const addDailyItem = async () => {
+                    if (!currentEvent.value || !newSchedule.value.location) return;
+                    const updatedItems = [...currentEvent.value.dailyItems, {
+                        ...newSchedule.value,
+                        id: crypto.randomUUID(),
+                    }];
+                    await updateEvent({ dailyItems: updatedItems });
+                    newSchedule.value = { time: '09:00', location: '', description: '' };
+                };
+
+                const deleteDailyItem = async (itemId) => {
+                    if (!currentEvent.value) return;
+                    const updatedItems = currentEvent.value.dailyItems.filter(item => item.id !== itemId);
+                    await updateEvent({ dailyItems: updatedItems });
+                };
+
+                // Expense CRUD
+                const addExpense = async () => {
+                    if (!currentEvent.value || !newExpense.value.amount || newExpense.value.participants.length === 0) return;
+                    const newExp = {
+                        ...newExpense.value,
+                        amount: parseFloat(newExpense.value.amount),
+                        id: crypto.randomUUID(),
+                    };
+                    const updatedExpenses = [...currentEvent.value.expenses, newExp];
+                    await updateEvent({ expenses: updatedExpenses });
+                    newExpense.value = { description: '', amount: 0, payer: '我', participants: ['我'] };
+                };
+
+                const deleteExpense = async (expenseId) => {
+                    if (!currentEvent.value) return;
+                    const updatedExpenses = currentEvent.value.expenses.filter(item => item.id !== expenseId);
+                    await updateEvent({ expenses: updatedExpenses });
+                };
+
+                // --- 初始啟動 ---
+                handleAuth();
+
+                return {
+                    // State
+                    loading,
+                    isAuthReady,
+                    events,
+                    activeEventId,
+                    activeTab,
+                    newEventName,
+                    newArtistName,
+                    showEventModal,
+                    newEventDate, 
+                    newEventLocation, 
+                    newSchedule,
+                    newExpense,
+                    
+                    // NEW: Review filter state
+                    selectedReviewYear, 
+                    showExclusionDisclaimer, 
+                    
+                    // 新增的 CSV 匯入狀態
+                    selectedFile,
+                    isImporting,
+                    showImportModal, 
+                    handleFileSelect,
+                    importCSV,
+                    
+                    // 新增的參與者狀態
+                    newParticipant,
+
+                    // Computed
+                    currentEvent,
+                    eventYears,
+                    eventsInSelectedScope, // Expose for the detailed list
+                    overallStats, 
+                    mapLink, 
+                    expenseSummary,
+                    settlementInstructions,
+                    upcomingEvents, 
+                    pastEvents,     
+
+                    // Methods
+                    // UPDATED: 點擊行程時，先切換到 'info' 總覽頁面
+                    setActiveEvent: (id) => { 
+                        // 如果是從主列表點擊進來，切換到 info tab
+                        activeEventId.value = id; 
+                        activeTab.value = 'info'; 
+                    },
+                    setActiveTab: (tab) => activeTab.value = tab,
+                    // NEW: 專門用於回到主列表的方法 (並將 activeTab 設為 'schedule')
+                    goToEventList: () => { activeEventId.value = null; activeTab.value = 'schedule'; }, 
+                    addEvent,
+                    deleteEvent,
+                    
+                    // 參與者管理方法
+                    addParticipant,
+                    removeParticipant,
+                    
+                    addDailyItem,
+                    deleteDailyItem,
+                    addExpense,
+                    deleteExpense,
+                };
+            }
+        };
+
+        // Custom Tailwind Configuration for Aquamarine
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aquamarine: {
+                            50: '#f0fffe',
+                            100: '#d9fffd',
+                            200: '#a6f7f6',
+                            300: '#7BE0DF',
+                            400: '#4FBDBA', // 主色
+                            500: '#349996',
+                            600: '#2c7a77',
+                            700: '#235c59',
+                            800: '#1b3d3c',
+                            900: '#122524',
+                            950: '#070f0e',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+
+        // Mount the Vue app
+        window.onload = () => {
+            createApp(EventTracker).mount('#app');
+        };
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+    <!-- 主 App 容器 -->
+    <div id="app" class="flex justify-center">
+        <!-- 模擬手機 App 介面 -->
+        <div class="w-full max-w-md bg-white shadow-xl min-h-screen flex flex-col">
+
+            <!-- 頂部標題列 -->
+            <header class="bg-aquamarine-400 text-white p-4 shadow-lg sticky top-0 z-10">
+                <div class="flex justify-between items-center">
+                    <!-- NEW: 返回主列表按鈕 -->
+                    <button v-if="currentEvent" @click="goToEventList"
+                            class="text-white p-1 rounded-full transition duration-150 transform hover:scale-110">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <!-- TITLE -->
+                    <h1 class="text-xl font-bold" :class="{'w-full text-center': !currentEvent}">
+                        追星行程 App
+                    </h1>
+                    <div class="flex space-x-2">
+                        <!-- ADDED: 匯入行程按鈕 -->
+                        <button @click="showImportModal = true"
+                                class="bg-aquamarine-500 hover:bg-aquamarine-600 text-white p-2 rounded-full shadow transition duration-150 transform hover:scale-105">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.293a1 1 0 011.414 0L10 11.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <!-- 新增行程按鈕 -->
+                        <button @click="showEventModal = true"
+                                class="bg-aquamarine-500 hover:bg-aquamarine-600 text-white p-2 rounded-full shadow transition duration-150 transform hover:scale-105">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <button v-if="currentEvent" @click="deleteEvent(currentEvent.id)"
+                            class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition duration-150 transform hover:scale-105">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 當前行程/歌手資訊 (僅在選定活動時顯示) -->
+                <div v-if="currentEvent" class="mt-2 text-center">
+                    <h2 class="text-2xl font-extrabold">{{ currentEvent.eventName }}</h2>
+                    <p class="text-sm opacity-90">
+                        {{ currentEvent.artistName }} ({{ currentEvent.year }})
+                        <span v-if="currentEvent.date" class="block text-xs mt-1">
+                            日期: {{ currentEvent.date }} | 地點: {{ currentEvent.mainLocation || '未設定' }}
+                        </span>
+                    </p>
+                </div>
+            </header>
+
+            <!-- 內容區域 -->
+            <main class="flex-grow p-4 overflow-y-auto">
+                <!-- 加載狀態 -->
+                <div v-if="loading || !isAuthReady" class="text-center p-8 text-gray-500">
+                    <p>正在努力連接 Firebase... 請稍候</p>
+                    <div class="mt-4 animate-spin rounded-full h-8 w-8 border-b-2 border-aquamarine-500 mx-auto"></div>
+                </div>
+
+                <!-- NEW CONTENT STRUCTURE -->
+                <div v-else>
+                    
+                    <!-- 1. Review Tab (回顧 - Global Content) -->
+                    <div v-if="activeTab === 'review'">
+                        <h2 class="text-xl font-semibold text-aquamarine-700 mb-4">✨ 追星年報：年度閃耀時刻回顧 ✨</h2>
+
+                        <!-- NEW: 年度選擇器 -->
+                        <div class="mb-4 flex items-center space-x-2">
+                            <label for="year-select" class="text-sm font-medium text-gray-700">選擇年度:</label>
+                            <select id="year-select" v-model="selectedReviewYear"
+                                    class="p-2 border border-aquamarine-300 rounded-lg text-sm bg-white focus:ring-aquamarine-400">
+                                <option value="all">總年度</option>
+                                <option v-for="year in eventYears" :key="year" :value="year">{{ year }} 年</option>
+                            </select>
+                        </div>
+
+                        <!-- Overall Stats Block (Enhanced) -->
+                        <div class="bg-aquamarine-100 p-4 rounded-xl shadow-lg mb-6 border-l-4 border-aquamarine-500">
+                            <h3 class="text-xl font-bold text-aquamarine-800 mb-3 flex items-center">
+                                <span class="text-3xl mr-2">🌟</span> 
+                                {{ selectedReviewYear === 'all' ? '總體追星成就' : selectedReviewYear + ' 年度追星成就' }} 🚀
+                            </h3>
+                            
+                            <!-- Total Events (Unfiltered) -->
+                            <p class="text-base text-gray-700 mb-4 border-b border-aquamarine-200 pb-2">
+                                總活動場次 (含所有)：<span class="text-2xl font-extrabold text-aquamarine-600">{{ overallStats.totalEventsAll }}</span> 場！ <span class="text-xl">🙌</span>
+                                <br>
+                                主要成就活動場次：<span class="text-xl font-extrabold text-aquamarine-600">{{ overallStats.totalEventsFiltered }}</span> 場
+                                <br>
+                                解鎖了 <span class="text-xl font-extrabold text-aquamarine-600">{{ overallStats.uniqueArtists }}</span> 位不同的偶像/藝人！ <span class="text-xl">💖</span>
+                            </p>
+                            
+                            <!-- NEW: 可展開的排除活動提示 -->
+                            <div class="mb-4">
+                                <button @click="showExclusionDisclaimer = !showExclusionDisclaimer" 
+                                        class="text-xs text-blue-600 hover:text-blue-800 transition underline focus:outline-none">
+                                    {{ showExclusionDisclaimer ? '▲ 隱藏排除活動提示' : '▼ 關於排除的活動類型 (點擊查看)' }}
+                                </button>
+                                <p v-if="showExclusionDisclaimer" class="text-xs text-red-500 mt-2 p-2 border border-red-300 bg-red-50 rounded-lg">
+                                    ※ **排行榜/重複場次** 統計已排除活動名稱中包含：「사전녹화」、「事前錄製」、「簽售會」、「簽名會」、「錄製」等非巡迴主題活動，以聚焦於大型演出成就。
+                                </p>
+                            </div>
+                            <!-- END NEW: 可展開的排除活動提示 -->
+
+                            <div v-if="overallStats.artistBreakdown.length > 0">
+                                <h4 class="font-semibold text-aquamarine-700 mt-2 flex items-center">🥇 忠誠度排行榜 (見了誰最多次)</h4>
+                                <ul class="text-sm space-y-1 mt-1">
+                                    <li v-for="(item, index) in overallStats.artistBreakdown.slice(0, 5)" :key="item.name" class="flex justify-between">
+                                        <span class="font-medium">
+                                            {{ index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : '✨' }} {{ item.name }}
+                                        </span>
+                                        <span class="font-bold text-aquamarine-700">{{ item.count }} 次</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div v-if="overallStats.eventRepetitionBreakdown.length > 0">
+                                <h4 class="font-semibold text-aquamarine-700 mt-4 border-t border-aquamarine-200 pt-3 flex items-center">
+                                    <span class="text-lg mr-1">🔥</span> 真愛重複場：這些舞台你絕對是VIP！ 
+                                </h4>
+                                <ul class="text-sm space-y-1 mt-1">
+                                    <li v-for="(item, index) in overallStats.eventRepetitionBreakdown.slice(0, 3)" :key="item.name" class="flex justify-between">
+                                        <span class="font-medium">
+                                            <span v-if="index === 0">✨ 無法抗拒的魅力！《{{ item.name }}》</span>
+                                            <span v-else-if="index === 1">💖 多刷的價值！《{{ item.name }}》</span>
+                                            <span v-else-if="index === 2">🎶 值得再看一遍！《{{ item.name }}》</span>
+                                            <span v-else>🔁 《{{ item.name }}》</span>
+                                        </span>
+                                        <span class="font-bold text-red-600">{{ item.count }} 場</span> 
+                                    </li>
+                                </ul>
+                            </div>
+                            <p v-else class="text-xs text-gray-500 mt-4 border-t border-aquamarine-200 pt-2">👏 太棒了，都是全新體驗！</p>
+                        </div>
+                        <!-- END Overall Stats Block -->
+
+                        <!-- NEW: 年度詳細活動清單 -->
+                        <h3 class="text-xl font-semibold text-aquamarine-700 mt-6 mb-3">
+                            📜 詳細活動清單 ({{ selectedReviewYear === 'all' ? '總年度' : selectedReviewYear + '年' }})
+                        </h3>
+                        <div v-if="eventsInSelectedScope.length > 0" class="space-y-2">
+                             <div v-for="event in eventsInSelectedScope" :key="event.id"
+                                 @click="setActiveEvent(event.id); setActiveTab('info')"
+                                 class="p-3 bg-white hover:bg-gray-50 rounded-lg border-l-4"
+                                 :class="event.date >= today ? 'border-aquamarine-500' : 'border-gray-400'">
+                                <p class="font-bold text-gray-800">{{ event.eventName }} ({{ event.artistName }})</p>
+                                <p class="text-sm text-gray-600 flex justify-between">
+                                    <span>📅 {{ event.date }}</span>
+                                    <span class="text-xs text-gray-500">{{ event.mainLocation || '未設定地點' }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div v-else class="text-center p-4 text-gray-500 border border-dashed rounded-xl">
+                            <p>此篩選範圍內沒有找到任何行程紀錄。</p>
+                        </div>
+                        <!-- END NEW: 年度詳細活動清單 -->
+
+                    </div>
+                    
+                    <!-- 2. Expense Tab (記帳 - Requires Event) -->
+                    <div v-else-if="activeTab === 'expense'">
+                        <h2 class="text-xl font-semibold text-aquamarine-700 mb-4">記帳與分攤</h2>
+                        
+                        <div v-if="!currentEvent" class="text-center p-8 bg-white rounded-xl shadow-md border border-red-300">
+                            <p class="text-lg font-bold text-red-600 mb-2">😭 請先選擇一個行程才能記帳！</p>
+                            <p class="text-gray-500">點擊底下的「行程」標籤回到列表選擇。</p>
+                        </div>
+                        
+                        <div v-else>
+                            <!-- 夥伴管理 (新增區塊) -->
+                            <div class="p-4 border border-aquamarine-300 rounded-xl bg-aquamarine-50 mb-6">
+                                <h3 class="font-semibold text-aquamarine-800 mb-3">同行夥伴管理 (分攤人)</h3>
+                                <div class="flex flex-wrap gap-2 mb-3">
+                                    <span v-for="p in currentEvent.participants" :key="p"
+                                        class="flex items-center bg-aquamarine-200 text-aquamarine-800 text-sm font-medium px-3 py-1 rounded-full shadow-sm">
+                                        {{ p }}
+                                        <button v-if="p !== '我'" @click="removeParticipant(p)" class="ml-2 text-red-500 hover:text-red-700">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <input type="text" v-model="newParticipant" placeholder="新增夥伴名稱"
+                                        @keyup.enter="addParticipant"
+                                        class="flex-grow p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                                    <button @click="addParticipant"
+                                            :disabled="!newParticipant.trim()"
+                                            class="bg-aquamarine-500 text-white p-2 rounded-lg hover:bg-aquamarine-600 transition disabled:bg-gray-400">
+                                        新增
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 結算結果 -->
+                            <div class="bg-aquamarine-100 p-4 rounded-xl shadow-md mb-4">
+                                <p class="font-bold text-aquamarine-800 mb-2">總花費: NT$ {{ expenseSummary.totalSpent.toFixed(2) }}</p>
+                                <div v-if="settlementInstructions.length > 0" class="space-y-2">
+                                    <h3 class="font-semibold text-aquamarine-700 border-b border-aquamarine-300 pb-1">結算建議 (誰該給誰錢)</h3>
+                                    <div v-for="inst in settlementInstructions" :key="inst.from + inst.to"
+                                        class="flex justify-between items-center text-sm">
+                                        <span class="text-gray-700">{{ inst.from }} 應付給 {{ inst.to }}</span>
+                                        <span class="font-bold text-red-600">NT$ {{ inst.amount.toFixed(2) }}</span>
+                                    </div>
+                                </div>
+                                <p v-else class="text-gray-500">目前支出已平衡或無支出。</p>
+                            </div>
+
+                            <!-- 現有支出列表 -->
+                            <div v-if="currentEvent.expenses && currentEvent.expenses.length > 0" class="space-y-3 mb-6">
+                                <div v-for="exp in currentEvent.expenses" :key="exp.id"
+                                    class="p-3 bg-white border-l-4 border-aquamarine-400 rounded-lg shadow-sm">
+                                    <div class="flex justify-between items-center">
+                                        <p class="font-bold text-gray-800">{{ exp.description }} - NT$ {{ exp.amount }}</p>
+                                        <button @click="deleteExpense(exp.id)"
+                                                class="text-red-500 hover:text-red-700 p-1 rounded-full transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <p class="text-sm text-gray-500">付費人: {{ exp.payer }} | 分攤人: {{ exp.participants.join(', ') }}</p>
+                                </div>
+                            </div>
+
+                            <!-- 新增支出表單 -->
+                            <div class="mt-6 p-4 border border-aquamarine-300 rounded-xl bg-aquamarine-50">
+                                <h3 class="font-semibold text-aquamarine-800 mb-3">新增支出</h3>
+                                <div class="space-y-3">
+                                    <input type="text" v-model="newExpense.description" placeholder="支出項目描述 (如：演唱會門票)"
+                                        class="w-full p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                                    <input type="number" v-model.number="newExpense.amount" placeholder="金額 (NT$)"
+                                        class="w-full p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+
+                                    <select v-model="newExpense.payer"
+                                            class="w-full p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                                        <option v-for="p in currentEvent.participants" :key="p" :value="p">付費人: {{ p }}</option>
+                                    </select>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">分攤人 (可複選):</label>
+                                        <div class="flex flex-wrap gap-2">
+                                            <label v-for="p in currentEvent.participants" :key="p" class="inline-flex items-center">
+                                                <input type="checkbox" :value="p" v-model="newExpense.participants"
+                                                    class="form-checkbox text-aquamarine-500 rounded focus:ring-0">
+                                                <span class="ml-2 text-sm">{{ p }}</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <button @click="addExpense"
+                                            :disabled="newExpense.amount <= 0 || newExpense.participants.length === 0"
+                                            class="w-full bg-aquamarine-500 text-white font-bold py-2 rounded-lg hover:bg-aquamarine-600 transition disabled:bg-gray-400">
+                                        新增支出
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Schedule/Info/Default Tab (行程 - 列表或詳細) -->
+                    <div v-else> 
+                        
+                        <!-- 狀態 1: 已選定特定行程 (顯示 info 或 schedule) -->
+                        <div v-if="currentEvent">
+                            <!-- 行程資訊總覽 (info) -->
+                            <div v-if="activeTab === 'info'">
+                                <h2 class="text-xl font-semibold text-aquamarine-700 mb-4">行程總覽與確認</h2>
+
+                                <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-aquamarine-400 space-y-4">
+                                    <!-- UPDATED: Date and Location emphasized -->
+                                    <div class="text-center space-y-2">
+                                        <p class="text-5xl font-extrabold text-aquamarine-800">{{ currentEvent.date }}</p>
+                                        <p class="text-xl font-bold text-gray-800">{{ currentEvent.mainLocation || '未設定' }}</p>
+                                    </div>
+                                    <!-- END UPDATED -->
+
+                                    <hr class="border-gray-200">
+
+                                    <p class="text-lg font-bold text-gray-800">活動名稱: {{ currentEvent.eventName }}</p>
+                                    <p class="text-md text-gray-700">歌手/偶像: <span class="font-medium text-aquamarine-800">{{ currentEvent.artistName }}</span></p>
+                                    <p class="text-md text-gray-700">年度回顧: <span class="font-medium text-aquamarine-800">{{ currentEvent.year }} 年</span></p>
+                                    <p class="text-md text-gray-700">同行夥伴: <span class="font-medium text-aquamarine-800">{{ currentEvent.participants ? currentEvent.participants.join(', ') : '無' }}</span></p>
+
+                                    <div class="pt-4 border-t border-gray-200">
+                                        <button @click="setActiveTab('schedule')"
+                                                class="w-full bg-aquamarine-500 text-white font-bold py-3 rounded-lg hover:bg-aquamarine-600 transition shadow-lg transform hover:scale-[1.01]">
+                                            確認無誤，查看每日詳細行程 →
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 每日行程表 (schedule) -->
+                            <div v-else-if="activeTab === 'schedule'">
+                                <h2 class="text-xl font-semibold text-aquamarine-700 mb-4">每日行程表</h2>
+
+                                <!-- 地圖/導航連結 (UPDATED) -->
+                                <a v-if="mapLink" :href="mapLink.url" target="_blank"
+                                class="flex items-center justify-center bg-aquamarine-100 text-aquamarine-700 p-3 rounded-xl shadow-sm hover:bg-aquamarine-200 transition mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    查看地圖與導航 (地點來源: {{ mapLink.source }})
+                                </a>
+                                <div v-else class="text-center p-3 text-gray-500 bg-gray-100 rounded-xl mb-4">
+                                    請先新增每日行程或設定主要地點以啟用地圖功能。
+                                </div>
+                                <!-- End Map Link (UPDATED) -->
+
+                                <!-- 現有行程列表 -->
+                                <div v-if="currentEvent.dailyItems && currentEvent.dailyItems.length > 0" class="space-y-3">
+                                    <div v-for="item in currentEvent.dailyItems" :key="item.id"
+                                        class="flex justify-between items-center p-3 bg-white border-l-4 border-aquamarine-400 rounded-lg shadow-sm">
+                                        <div>
+                                            <p class="font-bold text-gray-800">{{ item.time }} - {{ item.location }}</p>
+                                            <p class="text-sm text-gray-500">{{ item.description }}</p>
+                                        </div>
+                                        <button @click="deleteDailyItem(item.id)"
+                                                class="text-red-500 hover:text-red-700 p-1 rounded-full transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center p-4 text-gray-500 border border-dashed rounded-xl mb-4">
+                                    <p>此行程尚未新增任何每日細節。</p>
+                                </div>
+
+                                <!-- 新增行程表單 (MODAL TRIGGER) -->
+                                <button onclick="document.getElementById('dailyItemModal').classList.remove('hidden')"
+                                        class="w-full bg-aquamarine-500 text-white font-bold py-2 rounded-lg hover:bg-aquamarine-600 transition mt-6">
+                                    + 新增每日行程項目
+                                </button>
+                            </div>
+                            <!-- Fallthrough: If activeTab is review or expense when currentEvent is true, 
+                                it will fall into the main v-else-if blocks above (review/expense) which is desired. -->
+
+                        </div>
+
+                        <!-- 狀態 2: 未選定行程 (顯示活動列表) -->
+                        <div v-else class="space-y-6">
+                            <h2 class="text-xl font-semibold text-aquamarine-700 mb-4">所有追星行程</h2>
+
+                            <!-- 待進行程 (Upcoming Events) -->
+                            <div class="bg-white p-4 rounded-xl shadow-md border-t-4 border-aquamarine-400">
+                                <h3 class="text-lg font-bold text-aquamarine-600 mb-3 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L14 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 110-6 3 3 0 010 6z" />
+                                    </svg>
+                                    待進行程 (即將啟動)
+                                </h3>
+                                <div v-if="upcomingEvents.length > 0" class="space-y-3">
+                                    <div v-for="event in upcomingEvents" :key="event.id"
+                                        @click="setActiveEvent(event.id)"
+                                        class="p-3 bg-aquamarine-50 hover:bg-aquamarine-100 rounded-lg border-l-4 border-aquamarine-500 active:scale-[0.99] transition transform duration-150 cursor-pointer">
+                                        <p class="font-bold text-gray-800">{{ event.eventName }}</p>
+                                        <p class="text-sm text-gray-600">{{ event.artistName }} - {{ event.date }}</p>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center p-3 text-gray-500 text-sm">
+                                    目前沒有待進行程，快去新增一個吧！
+                                </div>
+                            </div>
+
+                            <!-- 過去行程 (Past Events) -->
+                            <div class="bg-white p-4 rounded-xl shadow-md border-t-4 border-gray-400">
+                                <h3 class="text-lg font-bold text-gray-600 mb-3 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                                    </svg>
+                                    過去行程 (美好回憶)
+                                </h3>
+                                <div v-if="pastEvents.length > 0" class="space-y-3">
+                                    <div v-for="event in pastEvents" :key="event.id"
+                                        @click="setActiveEvent(event.id)"
+                                        class="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border-l-4 border-gray-400 active:scale-[0.99] transition transform duration-150 cursor-pointer opacity-80">
+                                        <p class="font-bold text-gray-700">{{ event.eventName }}</p>
+                                        <p class="text-sm text-gray-500">{{ event.artistName }} - {{ event.date }}</p>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center p-3 text-gray-500 text-sm">
+                                    目前還沒有任何紀錄。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END NEW CONTENT STRUCTURE -->
+            </main>
+
+            <!-- 底部導航列 -->
+            <nav class="bg-white border-t border-gray-200 sticky bottom-0 z-10 shadow-t-lg">
+                <div class="flex justify-around">
+                    <!-- 1. 行程 (Schedule/Info) -->
+                    <button @click="goToEventList()"
+                            class="flex flex-col items-center p-3 w-1/3 transition"
+                            :class="activeTab === 'schedule' || activeTab === 'info' ? 'text-aquamarine-500 border-t-2 border-aquamarine-500' : 'text-gray-500'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="text-xs mt-1">行程</span>
+                    </button>
+                    <!-- 2. 回顧 (Review) -->
+                    <button @click="setActiveTab('review')"
+                            class="flex flex-col items-center p-3 w-1/3 transition"
+                            :class="activeTab === 'review' ? 'text-aquamarine-500 border-t-2 border-aquamarine-500' : 'text-gray-500'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 6a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V6z" />
+                        </svg>
+                        <span class="text-xs mt-1">回顧</span>
+                    </button>
+                    <!-- 3. 記帳 (Expense) -->
+                    <button @click="setActiveTab('expense')"
+                            class="flex flex-col items-center p-3 w-1/3 transition"
+                            :class="activeTab === 'expense' ? 'text-aquamarine-500 border-t-2 border-aquamarine-500' : 'text-gray-500'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                            <path fill-rule="evenodd" d="M18 9H2v7a2 2 0 002 2h12a2 2 0 002-2V9zM7 11a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="text-xs mt-1">記帳</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Modal for New Event (手動新增行程) -->
+            <div v-if="showEventModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
+                <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                    <h2 class="text-xl font-bold text-aquamarine-700 mb-4">新增追星行程</h2>
+                    <div class="space-y-4">
+                        <input type="text" v-model="newEventName" placeholder="活動名稱 (如：XX 演唱會)"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                        <input type="text" v-model="newArtistName" placeholder="歌手/明星是誰 (如：周杰倫)"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                        
+                        <!-- 新增：活動日期 -->
+                        <label for="eventDate" class="block text-sm font-medium text-gray-700 pt-2">活動日期 (必填):</label>
+                        <input type="date" id="eventDate" v-model="newEventDate" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+
+                        <!-- 新增：主要地點 -->
+                        <input type="text" v-model="newEventLocation" placeholder="主要地點 (如：台北小巨蛋)"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+
+                        <button @click="addEvent"
+                                :disabled="!newEventName || !newArtistName || !newEventDate"
+                                class="w-full bg-aquamarine-500 text-white font-bold py-3 rounded-lg hover:bg-aquamarine-600 transition disabled:bg-gray-400">
+                            確定新增
+                        </button>
+                        <button @click="showEventModal = false"
+                                class="w-full text-gray-600 font-medium py-2 rounded-lg hover:text-red-500 transition">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for CSV Import (批次匯入行程) -->
+            <div v-if="showImportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
+                <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                    <h2 class="text-xl font-bold text-aquamarine-700 mb-4">批次匯入行程 (CSV)</h2>
+                    <div class="space-y-4">
+                        <input type="file" @change="handleFileSelect" accept=".csv"
+                               class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-aquamarine-100 file:text-aquamarine-700 hover:file:bg-aquamarine-200"
+                               id="csvFile" :disabled="isImporting">
+                        
+                        <p class="text-xs text-gray-500 border-t border-dashed pt-2">支援欄位: **日期**, **歌手**, **活動名稱**, **地點** (日期需為 YYMMDD 格式)</p>
+
+                        <button @click="importCSV" :disabled="!selectedFile || isImporting"
+                                class="w-full bg-aquamarine-500 text-white font-bold py-3 rounded-lg transition disabled:bg-gray-400 hover:bg-aquamarine-600 flex items-center justify-center">
+                            <span v-if="isImporting">
+                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                正在匯入中...
+                            </span>
+                            <span v-else>
+                                確定匯入 {{ selectedFile ? selectedFile.name : '請先選擇 CSV 檔案' }}
+                            </span>
+                        </button>
+                        <button @click="showImportModal = false"
+                                class="w-full text-gray-600 font-medium py-2 rounded-lg hover:text-red-500 transition">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for New Daily Item (新增每日行程項目) - ADDED -->
+            <div id="dailyItemModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20 hidden">
+                <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                    <h3 class="font-bold text-aquamarine-800 mb-3 text-lg">新增每日項目</h3>
+                    <div class="space-y-3">
+                        <input type="time" v-model="newSchedule.time"
+                               class="w-full p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                        <input type="text" v-model="newSchedule.location" placeholder="地點 (如：台北小巨蛋)"
+                               class="w-full p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                        <input type="text" v-model="newSchedule.description" placeholder="活動細節描述 (如：演唱會入場)"
+                               class="w-full p-2 border border-aquamarine-300 rounded-lg focus:ring-aquamarine-400 focus:border-aquamarine-400">
+                        
+                        <div class="flex space-x-3 pt-2">
+                             <button @click="addDailyItem(); document.getElementById('dailyItemModal').classList.add('hidden')"
+                                class="w-full bg-aquamarine-500 text-white font-bold py-2 rounded-lg hover:bg-aquamarine-600 transition">
+                                新增項目
+                            </button>
+                            <button @click="document.getElementById('dailyItemModal').classList.add('hidden')"
+                                    class="w-full text-gray-600 font-medium py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition">
+                                關閉
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Modal for New Daily Item -->
+
+        </div>
+    </div>
+
+</body>
+</html>
