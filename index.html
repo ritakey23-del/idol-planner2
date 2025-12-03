@@ -85,7 +85,6 @@
                     <h1 class="text-xl font-bold tracking-wide">追星日記 ✨</h1>
                     <p class="text-white/80 text-xs opacity-90">{{ greetingMessage }}</p>
                 </div>
-                <!-- 改為設定按鈕 -->
                 <div class="bg-white/20 p-2 rounded-full backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" @click="toggleSettingsModal">
                     <i class="ph ph-gear text-lg"></i>
                 </div>
@@ -133,12 +132,14 @@
                         <i class="ph ph-ticket text-5xl text-slate-300" v-if="viewMode === 'upcoming'"></i>
                         <i class="ph ph-image text-5xl text-slate-300" v-else></i>
                     </div>
+                    
                     <p class="text-slate-600 font-bold text-lg mb-2">
                         {{ viewMode === 'upcoming' ? '天啊你沒有演唱會可以看了！😱' : '還沒有收藏美好的回憶' }}
                     </p>
                     <p class="text-sm text-slate-400 mb-6">
                         {{ viewMode === 'upcoming' ? '快去買門票填滿行程吧！💸' : '時間會把現在變成最棒的歷史' }}
                     </p>
+
                     <button @click="openModal()" 
                             :style="{ color: themeColor, borderColor: themeColor }"
                             class="bg-white border-2 px-6 py-2 rounded-full font-bold shadow-sm active:scale-95 transition-transform text-sm flex items-center gap-2">
@@ -257,6 +258,7 @@
             <div v-if="activeTab === 'stats'" class="space-y-6 p-5 pb-32">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
+                    <button @click="showImportModal = true" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90"><i class="ph ph-download-simple text-lg"></i> 匯入</button>
                 </div>
                 <div class="space-y-4">
                     <div class="relative">
@@ -270,20 +272,22 @@
                         <p class="text-sm font-bold text-slate-700 italic">"{{ emotionalSummary }}"</p>
                     </div>
                 </div>
-                <!-- Stats Cards ... -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-2xl border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">累計場次</div>
                         <div class="text-2xl font-bold text-slate-800">{{ statsData.count }} <span class="text-sm font-normal text-slate-400">場</span></div>
                     </div>
-                    <div class="bg-gradient-to-br from-primary/10 to-primary/5 p-4 rounded-2xl border border-primary/20">
+                    <div class="bg-gradient-to-br from-primary/10 to-primary/5 p-4 rounded-2xl border border-primary/20 flex flex-col justify-center">
                         <div class="text-xs text-primary-dark mb-1">累計投資</div>
                         <div class="text-2xl font-bold" :style="{ color: themeColor + ' !important' }">
                              {{ isPrivacyMode ? '****' : '$' + formatMoney(statsData.totalSpent) }}
                         </div>
+                        <!-- Idol Nagging Text -->
+                        <div class="text-[10px] font-medium mt-1 leading-tight opacity-80 italic" :style="{ color: themeColor }">
+                            {{ idolNagging }}
+                        </div>
                     </div>
                 </div>
-                <!-- Top Artists ... -->
                  <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div class="flex justify-between items-center mb-4">
                          <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-crown text-yellow-500"></i> 本命排行榜</h3>
@@ -302,7 +306,6 @@
                     </div>
                     <div v-else class="text-center text-slate-400 text-sm py-4">區間內無資料</div>
                 </div>
-                <!-- Series ... -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就</h3>
@@ -344,12 +347,10 @@
             </button>
         </nav>
 
-        <!-- Settings / Theme Modal (Expanded for Backup) -->
+        <!-- Settings / Theme Modal -->
         <div v-if="showSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showSettingsModal = false">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
                 <h3 class="font-bold text-lg mb-4 text-slate-700">資料與主題設定 ⚙️</h3>
-                
-                <!-- Color Picker -->
                 <div class="mb-6">
                     <p class="text-xs text-slate-400 mb-2">全域主題色</p>
                     <div class="grid grid-cols-4 gap-3 mb-3">
@@ -357,24 +358,14 @@
                     </div>
                     <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl"><span class="text-sm text-slate-500">自訂:</span><input type="color" v-model="themeColor" class="w-full h-8 cursor-pointer rounded bg-transparent"></div>
                 </div>
-
                 <hr class="border-slate-100 my-4">
-
-                <!-- Backup/Restore -->
                 <div class="mb-4">
                     <p class="text-xs text-slate-400 mb-2">資料備份與轉移 (換手機用)</p>
                     <div class="flex flex-col gap-2">
-                        <button @click="downloadBackup" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200">
-                            <i class="ph ph-download-simple text-lg"></i> 備份資料 (下載檔案)
-                        </button>
-                        
-                        <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer">
-                            <i class="ph ph-upload-simple text-lg"></i> 還原資料 (上傳檔案)
-                            <input type="file" accept=".json" @change="restoreBackup" class="hidden">
-                        </label>
+                        <button @click="downloadBackup" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200"><i class="ph ph-download-simple text-lg"></i> 備份資料 (下載檔案)</button>
+                        <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer"><i class="ph ph-upload-simple text-lg"></i> 還原資料 (上傳檔案)<input type="file" accept=".json" @change="restoreBackup" class="hidden"></label>
                     </div>
                 </div>
-
                 <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
         </div>
@@ -438,7 +429,7 @@
             </div>
         </transition>
 
-        <!-- Import Modal (Text Paste) -->
+        <!-- Import Modal -->
         <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showImportModal = false">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md m-4">
                 <h3 class="font-bold text-lg mb-2 text-slate-700">批次匯入行程</h3>
@@ -466,7 +457,7 @@
                 const searchError = ref('');
                 
                 const showModal = ref(false);
-                const showSettingsModal = ref(false); // New: Replaced ThemeModal
+                const showSettingsModal = ref(false); 
                 const showImportModal = ref(false);
                 const isEditing = ref(false);
                 const importJson = ref('');
@@ -604,6 +595,18 @@
                     return pools[category][count % pools[category].length];
                 });
 
+                // Idol Nagging Message Logic
+                const idolNagging = computed(() => {
+                    const { totalSpent, topArtists } = statsData.value;
+                    const name = topArtists.length > 0 ? topArtists[0].name : '我'; // Default to "Me" (as in Idol)
+
+                    if (totalSpent === 0) return `最近有點冷清耶... ${name} 想見你了 🥺`;
+                    if (totalSpent < 5000) return `有乖乖吃飯嗎？${name} 不希望你為了追星餓肚子喔 🍱`;
+                    if (totalSpent < 20000) return `謝謝你的支持！但${name} 更希望把錢花在讓你開心的事情上 💖`;
+                    if (totalSpent < 50000) return `哇... 你的錢包還好嗎？${name} 有點擔心你吃土耶 😰`;
+                    return `天啊！你是不是把身家都給${name}了？雖然很感動，但要理性消費啦！🙏`;
+                });
+
                 const mappedEventsCount = computed(() => events.value.filter(e => e.lat && e.lng).length);
                 const missingCoordsCount = computed(() => events.value.length - mappedEventsCount.value);
 
@@ -639,7 +642,10 @@
                 const closeModal = () => showModal.value = false;
 
                 const searchCoordinates = async () => {
-                    if (!form.value.location) { searchError.value = "請先輸入地點名稱"; return; }
+                    if (!form.value.location) {
+                        searchError.value = "請先輸入地點名稱";
+                        return;
+                    }
                     isSearching.value = true;
                     searchError.value = '';
                     try {
@@ -648,34 +654,62 @@
                         if (data && data.length > 0) {
                             form.value.lat = parseFloat(data[0].lat);
                             form.value.lng = parseFloat(data[0].lon);
-                        } else { searchError.value = "找不到該地點，請嘗試更具體的名稱"; }
-                    } catch (e) { searchError.value = "連線錯誤，請稍後再試"; } finally { isSearching.value = false; }
+                        } else {
+                            searchError.value = "找不到該地點，請嘗試更具體的名稱 (如: 台北市小巨蛋)";
+                        }
+                    } catch (e) {
+                        searchError.value = "連線錯誤，請稍後再試";
+                    } finally {
+                        isSearching.value = false;
+                    }
                 };
 
                 const initMap = () => {
                     if (!map) {
-                        map = L.map('map-container').setView([23.6978, 120.9605], 7); 
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-                    } else { map.invalidateSize(); }
+                        map = L.map('map-container').setView([23.6978, 120.9605], 7); // Default Center Taiwan
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors'
+                        }).addTo(map);
+                    } else {
+                        map.invalidateSize();
+                    }
+
+                    // Clear existing markers
                     markers.forEach(m => map.removeLayer(m));
                     markers = [];
+
+                    // Add markers for events with coordinates
                     const validEvents = events.value.filter(e => e.lat && e.lng);
                     const bounds = [];
+
                     validEvents.forEach(e => {
                         const color = getEventColor(e);
-                        const marker = L.circleMarker([e.lat, e.lng], { radius: 8, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8 }).addTo(map);
+                        const marker = L.circleMarker([e.lat, e.lng], {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map);
+                        
                         marker.bindPopup(`<b>${e.artist}</b><br>${e.title}<br>${e.date}`);
                         markers.push(marker);
                         bounds.push([e.lat, e.lng]);
                     });
-                    if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
                 };
 
                 const saveEvent = () => {
                     if (!form.value.title || !form.value.date) return alert('請填寫活動名稱與日期 🥺');
                     form.value.expenses = form.value.expenses.filter(e => e.item && e.item.trim() !== '');
                     form.value.checklist = form.value.checklist.filter(c => c.text && c.text.trim() !== '');
+                    
                     if (form.value.color === themeColor.value) form.value.color = '';
+
                     if (isEditing.value) {
                         const idx = events.value.findIndex(e => e.id === form.value.id);
                         if (idx !== -1) events.value[idx] = { ...form.value };
@@ -787,7 +821,7 @@
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
-                    downloadBackup, restoreBackup
+                    downloadBackup, restoreBackup, idolNagging
                 };
             }
         }).mount('#app');
