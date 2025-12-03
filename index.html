@@ -11,8 +11,10 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons (改用 CSS 載入，GitHub Pages 更穩定) -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Phosphor Icons CSS -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
 
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
@@ -80,29 +82,29 @@
     <div id="app" :style="cssVars" class="h-full flex flex-col relative">
 
         <!-- Header -->
-        <header class="text-white pt-12 pb-6 px-6 shadow-lg rounded-b-[2rem] z-10 shrink-0 transition-colors duration-200"
+        <header class="text-white pt-10 pb-4 px-5 shadow-lg rounded-b-[1.5rem] z-10 shrink-0 transition-colors duration-200"
                 :style="{ backgroundColor: themeColor }">
-            <div class="flex justify-between items-center mb-2">
+            <div class="flex justify-between items-center mb-3">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-wide">追星日記 ✨</h1>
-                    <p class="text-white/80 text-sm opacity-90">{{ greetingMessage }}</p>
+                    <h1 class="text-xl font-bold tracking-wide">追星日記 ✨</h1>
+                    <p class="text-white/80 text-xs opacity-90">{{ greetingMessage }}</p>
                 </div>
-                <div class="bg-white/20 p-2 rounded-full backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" @click="toggleThemeModal">
-                    <i class="ph ph-paint-brush-broad text-xl"></i>
+                <div class="bg-white/20 p-1.5 rounded-full backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" @click="toggleThemeModal">
+                    <i class="ph ph-paint-brush-broad text-lg"></i>
                 </div>
             </div>
             
-            <div class="flex gap-4 mt-4" v-if="activeTab === 'home'">
-                <div class="bg-white/20 backdrop-blur-md rounded-xl p-3 flex-1 text-center">
-                    <div class="text-xs text-white/80 mb-1">倒數中</div>
-                    <div class="text-xl font-bold">{{ upcomingCount }} <span class="text-xs font-normal">場</span></div>
+            <div class="flex gap-3 mt-1" v-if="activeTab === 'home'">
+                <div class="bg-white/20 backdrop-blur-md rounded-xl p-2.5 flex-1 text-center">
+                    <div class="text-[10px] text-white/80 mb-0.5">倒數中</div>
+                    <div class="text-lg font-bold">{{ upcomingCount }} <span class="text-xs font-normal">場</span></div>
                 </div>
-                <div class="bg-white/20 backdrop-blur-md rounded-xl p-3 flex-1 text-center relative group">
-                    <div class="text-xs text-white/80 mb-1">年度花費</div>
-                    <div class="text-xl font-bold">
+                <div class="bg-white/20 backdrop-blur-md rounded-xl p-2.5 flex-1 text-center relative group">
+                    <div class="text-[10px] text-white/80 mb-0.5">年度花費</div>
+                    <div class="text-lg font-bold">
                          {{ isPrivacyMode ? '****' : '$' + formatMoney(currentYearExpense) }}
                     </div>
-                     <button @click="togglePrivacy" class="absolute top-2 right-2 text-white/50 hover:text-white">
+                     <button @click="togglePrivacy" class="absolute top-1.5 right-1.5 text-white/50 hover:text-white">
                         <i class="ph" :class="isPrivacyMode ? 'ph-eye-slash' : 'ph-eye'"></i>
                     </button>
                 </div>
@@ -110,13 +112,13 @@
         </header>
 
         <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto no-scrollbar p-6 pb-24 scroll-smooth">
+        <main class="flex-1 overflow-y-auto no-scrollbar p-5 pb-24 scroll-smooth">
             
             <!-- Tab: Home (Schedule) -->
-            <div v-if="activeTab === 'home'" class="space-y-6">
+            <div v-if="activeTab === 'home'" class="space-y-5">
                 
                 <!-- Toggle Switch -->
-                <div class="flex bg-slate-200 p-1 rounded-full relative mb-6">
+                <div class="flex bg-slate-200 p-1 rounded-full relative mb-4">
                     <div class="w-1/2 h-full absolute bg-white rounded-full shadow-sm transition-all duration-300 transform"
                          :class="viewMode === 'upcoming' ? 'translate-x-0' : 'translate-x-full'"></div>
                     <button @click="viewMode = 'upcoming'" class="flex-1 py-2 text-sm font-medium z-10 transition-colors duration-300 text-center"
@@ -227,6 +229,7 @@
                             </div>
                         </div>
 
+                        <!-- Expanded Detail -->
                         <transition name="expand">
                             <div v-if="expandedEventId === event.id" class="bg-slate-50 border-t border-slate-100 px-6 py-4 overflow-hidden">
                                 <div class="mb-4">
@@ -273,8 +276,6 @@
                 
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
-                    
-                    <!-- 匯入按鈕修復 -->
                     <button @click="showImportModal = true" 
                             :style="{ backgroundColor: themeColor }"
                             class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
@@ -282,15 +283,28 @@
                     </button>
                 </div>
 
-                <div class="relative">
-                    <select v-model="selectedYear" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-8 rounded-xl font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                        <option value="ALL">🗓️ 全部年份總回顧</option>
-                        <option v-for="year in availableYears" :key="year" :value="year">
-                            {{ year }} 年度回顧
-                        </option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                        <i class="ph ph-caret-down-bold"></i>
+                <!-- Year Filter (Fix: Removed 'ALL' option) -->
+                <div class="space-y-4">
+                    <div class="relative">
+                        <select v-model="selectedYear" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-8 rounded-xl font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <!-- 已移除全部年份選項，強制使用者選擇年份 -->
+                            <option v-for="year in availableYears" :key="year" :value="year">
+                                {{ year }} 年度回顧
+                            </option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                            <i class="ph ph-caret-down-bold"></i>
+                        </div>
+                        <div v-if="availableYears.length === 0" class="text-xs text-center text-slate-400 mt-2">
+                            尚無歷史行程數據
+                        </div>
+                    </div>
+
+                    <!-- Emotional Stats Banner -->
+                    <div v-if="emotionalSummary" class="bg-white p-4 rounded-xl shadow-sm border-l-4" :style="{ borderColor: themeColor }">
+                        <p class="text-sm font-bold text-slate-700 italic">
+                            "{{ emotionalSummary }}"
+                        </p>
                     </div>
                 </div>
 
@@ -301,13 +315,13 @@
                     </div>
                     <div class="bg-gradient-to-br from-primary/10 to-primary/5 p-4 rounded-2xl border border-primary/20">
                         <div class="text-xs text-primary-dark mb-1">累計投資</div>
-                        <!-- 累計投資顏色修復：強制綁定並移除干擾 class -->
-                        <div class="text-2xl font-bold" :style="{ color: themeColor }">
+                        <div class="text-2xl font-bold" :style="{ color: themeColor + ' !important' }">
                              {{ isPrivacyMode ? '****' : '$' + formatMoney(statsData.totalSpent) }}
                         </div>
                     </div>
                 </div>
 
+                <!-- Top 3 Artists -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div class="flex justify-between items-center mb-4">
                          <h3 class="font-bold text-slate-800 flex items-center gap-2">
@@ -333,10 +347,11 @@
                         </div>
                     </div>
                     <div v-else class="text-center text-slate-400 text-sm py-4">
-                        區間內無資料
+                        {{ selectedYear ? `${selectedYear} 年無資料` : '請匯入或新增行程' }}
                     </div>
                 </div>
 
+                <!-- Series Count -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="font-bold text-slate-800 flex items-center gap-2">
@@ -374,14 +389,14 @@
             <button @click="activeTab = 'home'" class="flex flex-col items-center gap-1 transition-colors w-16" 
                 :class="activeTab === 'home' ? '' : 'text-slate-400'"
                 :style="{ color: activeTab === 'home' ? themeColor : '' }">
-                <i class="ph text-2xl ph-calendar-check" :class="{ 'ph-fill': activeTab === 'home' }"></i>
+                <i class="ph text-2xl ph-calendar-check" :class="{ 'ph-fill': activeTab === 'home', 'ph-bold': activeTab !== 'home' }"></i>
                 <span class="text-[10px] font-medium">行程</span>
             </button>
             
             <button @click="activeTab = 'stats'" class="flex flex-col items-center gap-1 transition-colors w-16"
                 :class="activeTab === 'stats' ? '' : 'text-slate-400'"
                 :style="{ color: activeTab === 'stats' ? themeColor : '' }">
-                <i class="ph text-2xl ph-chart-pie-slice" :class="{ 'ph-fill': activeTab === 'stats' }"></i>
+                <i class="ph text-2xl ph-chart-pie-slice" :class="{ 'ph-fill': activeTab === 'stats', 'ph-bold': activeTab !== 'stats' }"></i>
                 <span class="text-[10px] font-medium">回顧</span>
             </button>
         </nav>
@@ -508,7 +523,7 @@
             </div>
         </transition>
 
-        <!-- Theme Modal -->
+        <!-- Global Theme Modal -->
         <div v-if="showThemeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showThemeModal = false">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
                 <h3 class="font-bold text-lg mb-4 text-slate-700">APP 全域主題色 🎨</h3>
@@ -536,7 +551,6 @@
                 <textarea v-model="importJson" class="w-full h-40 bg-slate-50 border rounded-xl p-3 text-xs font-mono mb-4 leading-relaxed" placeholder='[{"日期": 230422, "歌手": "Taemin", "活動名稱": "RE : ACT", "地點": "首爾"}]'></textarea>
                 <div class="flex gap-2">
                     <button @click="showImportModal = false" class="flex-1 py-2 text-slate-500">取消</button>
-                    <!-- 匯入按鈕修復：強制變色 -->
                     <button @click="processImport" 
                             :style="{ backgroundColor: themeColor }"
                             class="flex-1 text-white py-2 rounded-lg font-bold shadow-sm">匯入</button>
@@ -555,7 +569,7 @@
                 const activeTab = ref('home');
                 const viewMode = ref('upcoming');
                 const themeColor = ref('#63b3b0'); 
-                const selectedYear = ref('ALL');
+                const selectedYear = ref(''); // Default empty, will auto-select
                 const expandedEventId = ref(null);
                 const isPrivacyMode = ref(true);
                 
@@ -589,6 +603,13 @@
                     }
                     const savedTheme = localStorage.getItem('idolTheme');
                     if (savedTheme) themeColor.value = savedTheme;
+                    
+                    // Init selection to current year or latest
+                    if (availableYears.value.length > 0) {
+                        selectedYear.value = availableYears.value[0];
+                    } else {
+                        selectedYear.value = new Date().getFullYear().toString();
+                    }
                 });
 
                 watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
@@ -643,16 +664,34 @@
                         .reduce((sum, e) => sum + calculateTotal(e.expenses), 0);
                 });
 
+                // ** 年度選單邏輯 (Revised for robustness) **
                 const availableYears = computed(() => {
-                    const years = new Set(events.value.map(e => e.date.split('-')[0]));
-                    return Array.from(years).sort((a, b) => b - a);
+                    const years = new Set(events.value.map(e => {
+                        // Regex to grab the first 4 digits as year
+                        const match = e.date.match(/^(\d{4})/);
+                        return match ? match[1] : null;
+                    }).filter(y => y !== null));
+                    return Array.from(years).sort((a, b) => b - a); // Descending
+                });
+                
+                // Watcher to auto-select latest year when data changes (e.g. import)
+                watch(availableYears, (newYears) => {
+                    // If current selection is invalid or empty, pick the first one (latest)
+                    if (newYears.length > 0 && !newYears.includes(selectedYear.value)) {
+                        selectedYear.value = newYears[0];
+                    }
                 });
 
                 const statsData = computed(() => {
                     let targetEvents = events.value;
-                    if (selectedYear.value !== 'ALL') {
-                        targetEvents = events.value.filter(e => e.date.startsWith(selectedYear.value));
+                    // Strict filtering by selected year
+                    if (selectedYear.value) {
+                        targetEvents = events.value.filter(e => e.date.match(new RegExp(`^${selectedYear.value}`)));
+                    } else {
+                        // If no year selected (no data), empty array
+                        targetEvents = [];
                     }
+
                     const count = targetEvents.length;
                     const totalSpent = targetEvents.reduce((acc, curr) => acc + calculateTotal(curr.expenses), 0);
                     
@@ -676,7 +715,18 @@
                     return { count, totalSpent, topArtists: sortedArtists, maxArtistCount, series };
                 });
 
-                // Methods
+                const emotionalSummary = computed(() => {
+                    const { count, totalSpent, topArtists } = statsData.value;
+                    if (count === 0) return "準備好開啟新的追星旅程了嗎？🌟";
+                    
+                    let mainArtist = topArtists.length > 0 ? topArtists[0].name : "他們";
+                    
+                    if (count > 20) return `哇！這一年你為了見${mainArtist}真的拚盡全力了！🔥`;
+                    if (totalSpent > 50000) return "錢錢沒有不見，變成了喜歡的樣子！💸";
+                    if (count > 5) return `每一場相遇都是奇蹟，謝謝${mainArtist}帶給你的力量 ✨`;
+                    return "重質不重量，這些回憶會陪伴你很久很久 💖";
+                });
+
                 const calculateTotal = (expenses) => expenses ? expenses.reduce((sum, i) => sum + (Number(i.amount)||0), 0) : 0;
                 const addExpenseItem = (n) => form.value.expenses.push({ item: n, amount: '' });
                 const removeExpenseItem = (i) => form.value.expenses.splice(i, 1);
@@ -731,7 +781,6 @@
 
                 const toggleThemeModal = () => showThemeModal.value = !showThemeModal.value;
 
-                // ** 匯入日期邏輯修復 **
                 const processImport = () => {
                     try {
                         const data = JSON.parse(importJson.value);
@@ -745,23 +794,16 @@
                                 let seat = d.seat || d['座位'] || '';
                                 let memo = d.memo || d['心得'] || '';
                                 
-                                // 日期解析增強
                                 let rawDate = d.date || d['日期'] || '';
-                                // 預設今天
                                 let formattedDate = new Date().toISOString().split('T')[0];
                                 
                                 if (rawDate) {
                                     const str = String(rawDate).trim();
-                                    // 230422 (6位數)
                                     if (/^\d{6}$/.test(str)) {
                                         formattedDate = `20${str.substring(0, 2)}-${str.substring(2, 4)}-${str.substring(4, 6)}`;
-                                    } 
-                                    // 20230422 (8位數)
-                                    else if (/^\d{8}$/.test(str)) {
+                                    } else if (/^\d{8}$/.test(str)) {
                                         formattedDate = `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
-                                    } 
-                                    // 2023/04/22 or 2023-04-22
-                                    else if (str.includes('-') || str.includes('/')) {
+                                    } else if (str.includes('-') || str.includes('/')) {
                                         formattedDate = str.replace(/\//g, '-'); 
                                     }
                                 }
@@ -788,16 +830,15 @@
                 const getMonth = (d) => ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][new Date(d).getMonth()];
                 const getDaysDiff = (d) => Math.ceil((new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0))/(1000*60*60*24));
                 const getMapLink = (l) => l ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#';
-                const getYearlyQuote = (c) => c===0 ? "沈澱是為了飛得更高" : (c<3 ? "重質不重量，見面即奇蹟" : (c<10 ? "回憶滿滿的一年" : "太強了！追星模範生"));
 
                 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode,
                     showModal, showThemeModal, showImportModal, isEditing, form, importJson,
                     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors,
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleThemeModal, setTheme, updateCustomTheme, processImport, 
-                    toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, getYearlyQuote, 
+                    toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
-                    getEventColor
+                    getEventColor, emotionalSummary, availableYears
                 };
             }
         }).mount('#app');
