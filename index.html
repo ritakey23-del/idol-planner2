@@ -11,10 +11,15 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons -->
+    <!-- Phosphor Icons CSS -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+
+    <!-- Leaflet CSS (地圖) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS (地圖) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
@@ -43,31 +48,20 @@
             --primary-light: #e0f2f1;
         }
 
-        /* 關鍵修正：強制 body 高度適配移動端動態視窗 */
+        /* Safari Fix: 強制 body 高度適配移動端動態視窗 */
         body {
             background-color: #f8fafc;
             -webkit-tap-highlight-color: transparent;
             height: 100dvh; /* Dynamic Viewport Height */
             width: 100vw;
-            overflow: hidden; /* 禁止整體滾動，只允許內部滾動 */
+            overflow: hidden; /* 禁止整體滾動 */
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .expand-enter-active, .expand-leave-active {
-            transition: all 0.3s ease-in-out;
-            max-height: 1000px;
-            opacity: 1;
-        }
-        .expand-enter-from, .expand-leave-to {
-            max-height: 0;
-            opacity: 0;
-            margin-top: 0;
-            margin-bottom: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-        }
+        .expand-enter-active, .expand-leave-active { transition: all 0.3s ease-in-out; max-height: 1000px; opacity: 1; }
+        .expand-enter-from, .expand-leave-to { max-height: 0; opacity: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
 
         .slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s ease-out; }
         .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
@@ -75,23 +69,22 @@
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-        .custom-checkbox:checked + div {
-            text-decoration: line-through;
-            color: #94a3b8;
-        }
+        .custom-checkbox:checked + div { text-decoration: line-through; color: #94a3b8; }
         
         /* 針對 iPhone X+ 的底部安全區域修正 */
-        .safe-pb {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
+        .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+
+        /* 地圖容器 */
+        #map-container { height: 100%; width: 100%; z-index: 1; }
+        .leaflet-bottom { z-index: 400 !important; } /* 避免擋住 FAB */
     </style>
 </head>
 <body class="text-slate-700 antialiased selection:bg-primary selection:text-white flex flex-col">
 
     <div id="app" :style="cssVars" class="h-full flex flex-col relative w-full">
 
-        <!-- Header: 固定在頂部 (Flex Item 不縮放) -->
-        <header class="text-white pt-10 pb-4 px-5 shadow-lg rounded-b-[1.5rem] z-10 shrink-0 transition-colors duration-200"
+        <!-- Header -->
+        <header class="text-white pt-10 pb-4 px-5 shadow-lg rounded-b-[1.5rem] z-20 shrink-0 transition-colors duration-200"
                 :style="{ backgroundColor: themeColor }">
             <div class="flex justify-between items-center mb-3">
                 <div>
@@ -120,13 +113,11 @@
             </div>
         </header>
 
-        <!-- Main Content Area: 中間滾動區域 (flex-1 自動填滿剩餘空間) -->
-        <main class="flex-1 overflow-y-auto no-scrollbar p-5 scroll-smooth w-full">
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto no-scrollbar scroll-smooth w-full relative bg-slate-50">
             
             <!-- Tab: Home (Schedule) -->
-            <div v-if="activeTab === 'home'" class="space-y-5 pb-24">
-                
-                <!-- Toggle Switch -->
+            <div v-if="activeTab === 'home'" class="space-y-5 p-5 pb-32">
                 <div class="flex bg-slate-200 p-1 rounded-full relative mb-4">
                     <div class="w-1/2 h-full absolute bg-white rounded-full shadow-sm transition-all duration-300 transform"
                          :class="viewMode === 'upcoming' ? 'translate-x-0' : 'translate-x-full'"></div>
@@ -142,20 +133,17 @@
                     </button>
                 </div>
 
-                <!-- Empty State -->
                 <div v-if="filteredEvents.length === 0" class="text-center py-12 px-4 opacity-80 flex flex-col items-center">
                     <div class="bg-slate-100 p-6 rounded-full mb-4">
                         <i class="ph ph-ticket text-5xl text-slate-300" v-if="viewMode === 'upcoming'"></i>
                         <i class="ph ph-image text-5xl text-slate-300" v-else></i>
                     </div>
-                    
                     <p class="text-slate-600 font-bold text-lg mb-2">
                         {{ viewMode === 'upcoming' ? '天啊你沒有演唱會可以看了！😱' : '還沒有收藏美好的回憶' }}
                     </p>
                     <p class="text-sm text-slate-400 mb-6">
                         {{ viewMode === 'upcoming' ? '快去買門票填滿行程吧！💸' : '時間會把現在變成最棒的歷史' }}
                     </p>
-
                     <button @click="openModal()" 
                             :style="{ color: themeColor, borderColor: themeColor }"
                             class="bg-white border-2 px-6 py-2 rounded-full font-bold shadow-sm active:scale-95 transition-transform text-sm flex items-center gap-2">
@@ -164,16 +152,12 @@
                     </button>
                 </div>
 
-                <!-- Event Cards -->
                 <transition-group name="fade" tag="div" class="space-y-4">
                     <div v-for="event in filteredEvents" :key="event.id" 
                          class="bg-white rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group transition-all duration-300"
                          :class="{'ring-2 ring-primary/30': expandedEventId === event.id}">
-                        
-                        <!-- Main Card Content -->
                         <div class="p-5 cursor-pointer relative" @click="toggleExpand(event.id)">
                             <div class="absolute left-0 top-0 bottom-0 w-1.5" :style="{ backgroundColor: getEventColor(event) }"></div>
-
                             <div class="flex justify-between items-start mb-3 pl-2">
                                 <div>
                                     <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-white mb-1 shadow-sm"
@@ -194,7 +178,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="pl-2 space-y-2 text-sm text-slate-600">
                                 <div class="flex items-center gap-2">
                                     <i class="ph ph-clock" :style="{ color: getEventColor(event) }"></i>
@@ -203,7 +186,6 @@
                                         還有 {{ getDaysDiff(event.date) }} 天
                                     </span>
                                 </div>
-                                
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2 truncate pr-2 flex-1">
                                         <i class="ph ph-map-pin" :style="{ color: getEventColor(event) }"></i>
@@ -213,7 +195,6 @@
                                         <i class="ph ph-navigation-arrow-fill"></i> 導航
                                     </a>
                                 </div>
-                                
                                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-slate-100">
                                     <div class="flex items-center gap-2 text-slate-700">
                                         <i class="ph ph-wallet" :style="{ color: getEventColor(event) }"></i>
@@ -230,20 +211,16 @@
                                     </div>
                                 </div>
                             </div>
-                            
                              <div class="absolute top-4 right-4 flex gap-2 bg-white/90 p-1 rounded-lg shadow-sm"
                                   :class="expandedEventId === event.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'">
                                 <button @click.stop="editEvent(event)" class="text-slate-400 hover:text-blue-500"><i class="ph ph-pencil-simple"></i></button>
                                 <button @click.stop="deleteEvent(event.id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash"></i></button>
                             </div>
                         </div>
-
                         <transition name="expand">
                             <div v-if="expandedEventId === event.id" class="bg-slate-50 border-t border-slate-100 px-6 py-4 overflow-hidden">
                                 <div class="mb-4">
-                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                        <i class="ph ph-check-square"></i> 出發前檢查
-                                    </h4>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-check-square"></i> 出發前檢查</h4>
                                     <div v-if="event.checklist && event.checklist.length > 0" class="space-y-2">
                                         <label v-for="(item, idx) in event.checklist" :key="idx" class="flex items-center gap-2 cursor-pointer group">
                                             <input type="checkbox" v-model="item.checked" @change="saveChecklistState(event)" class="custom-checkbox w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/50">
@@ -253,22 +230,14 @@
                                     <div v-else class="text-xs text-slate-400 italic">無清單，編輯行程可新增</div>
                                 </div>
                                 <div class="mb-4" v-if="event.memo">
-                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                        <i class="ph ph-notebook"></i> 心得筆記
-                                    </h4>
-                                    <div class="text-sm text-slate-600 bg-white p-3 rounded-xl border border-slate-100 whitespace-pre-wrap leading-relaxed shadow-sm">
-                                        {{ event.memo }}
-                                    </div>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-notebook"></i> 心得筆記</h4>
+                                    <div class="text-sm text-slate-600 bg-white p-3 rounded-xl border border-slate-100 whitespace-pre-wrap leading-relaxed shadow-sm">{{ event.memo }}</div>
                                 </div>
                                 <div>
-                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                        <i class="ph ph-receipt"></i> 花費明細
-                                    </h4>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-receipt"></i> 花費明細</h4>
                                     <ul class="space-y-2 mb-2">
                                         <li v-for="(item, idx) in event.expenses" :key="idx" class="flex justify-between text-sm border-b border-slate-200 border-dashed pb-1 last:border-0">
-                                            <span class="text-slate-600 flex items-center gap-2">
-                                                <i class="ph ph-circle text-[6px] opacity-50"></i> {{ item.item }}
-                                            </span>
+                                            <span class="text-slate-600 flex items-center gap-2"><i class="ph ph-circle text-[6px] opacity-50"></i> {{ item.item }}</span>
                                             <span class="font-mono text-slate-800">${{ formatMoney(item.amount) }}</span>
                                         </li>
                                     </ul>
@@ -279,41 +248,33 @@
                 </transition-group>
             </div>
 
+            <!-- Tab: Map -->
+            <div v-show="activeTab === 'map'" class="w-full h-full relative">
+                <div id="map-container" class="w-full h-full bg-slate-200"></div>
+                <div class="absolute top-4 left-4 right-4 z-[400] bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-slate-100">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-map-trifold text-primary"></i> 追星足跡</h3>
+                    <p class="text-xs text-slate-500 mt-1">已解鎖 {{ mappedEventsCount }} 個地點 <span v-if="missingCoordsCount > 0" class="text-orange-500 ml-1">({{ missingCoordsCount }} 個待定位)</span></p>
+                </div>
+            </div>
+
             <!-- Tab: Stats -->
-            <div v-if="activeTab === 'stats'" class="space-y-6 pb-24">
-                
+            <div v-if="activeTab === 'stats'" class="space-y-6 p-5 pb-32">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
-                    
-                    <button @click="showImportModal = true" 
-                            :style="{ backgroundColor: themeColor }"
-                            class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
-                        <i class="ph ph-download-simple text-lg"></i> 匯入
-                    </button>
+                    <button @click="showImportModal = true" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90"><i class="ph ph-download-simple text-lg"></i> 匯入</button>
                 </div>
-
-                <!-- Year Filter -->
                 <div class="space-y-4">
                     <div class="relative">
                         <select v-model="selectedYear" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-8 rounded-xl font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
                             <option value="ALL">🗓️ 全部年份總回顧</option>
-                            <option v-for="year in availableYears" :key="year" :value="year">
-                                {{ year }} 年度回顧
-                            </option>
+                            <option v-for="year in availableYears" :key="year" :value="year">{{ year }} 年度回顧</option>
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                            <i class="ph ph-caret-down-bold"></i>
-                        </div>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><i class="ph ph-caret-down-bold"></i></div>
                     </div>
-
-                    <!-- Emotional Stats Banner -->
                     <div v-if="emotionalSummary" class="bg-white p-4 rounded-xl shadow-sm border-l-4" :style="{ borderColor: themeColor }">
-                        <p class="text-sm font-bold text-slate-700 italic">
-                            "{{ emotionalSummary }}"
-                        </p>
+                        <p class="text-sm font-bold text-slate-700 italic">"{{ emotionalSummary }}"</p>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-2xl border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">累計場次</div>
@@ -326,82 +287,47 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Top 3 Artists -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-center mb-4">
-                         <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                            <i class="ph ph-crown text-yellow-500"></i> 本命排行榜
-                        </h3>
-                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-full">含見面/錄製/簽售</span>
-                    </div>
-                   
+                    <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-crown text-yellow-500"></i> 本命排行榜</h3><span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-full">含見面/錄製/簽售</span></div>
                     <div v-if="statsData.topArtists.length > 0" class="space-y-4">
                         <div v-for="(artist, index) in statsData.topArtists" :key="artist.name" class="relative">
-                            <div class="flex justify-between text-sm mb-1 z-10 relative">
-                                <span class="font-bold text-slate-700">
-                                    <span class="inline-block w-5 text-center mr-1" 
-                                        :class="{'text-yellow-500': index===0, 'text-slate-400': index>0}">#{{index+1}}</span>
-                                    {{ artist.name }}
-                                </span>
-                                <span class="text-slate-500">{{ artist.count }} 次見面</span>
-                            </div>
-                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div class="h-full transition-all duration-1000 ease-out" 
-                                     :style="{ width: (artist.count / statsData.maxArtistCount * 100) + '%', backgroundColor: artist.color }"></div>
-                            </div>
+                            <div class="flex justify-between text-sm mb-1 z-10 relative"><span class="font-bold text-slate-700"><span class="inline-block w-5 text-center mr-1" :class="{'text-yellow-500': index===0, 'text-slate-400': index>0}">#{{index+1}}</span>{{ artist.name }}</span><span class="text-slate-500">{{ artist.count }} 次見面</span></div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"><div class="h-full transition-all duration-1000 ease-out" :style="{ width: (artist.count / statsData.maxArtistCount * 100) + '%', backgroundColor: artist.color }"></div></div>
                         </div>
                     </div>
-                    <div v-else class="text-center text-slate-400 text-sm py-4">
-                        區間內無資料
-                    </div>
+                    <div v-else class="text-center text-slate-400 text-sm py-4">區間內無資料</div>
                 </div>
-
-                <!-- Series Count -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                            <i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就
-                        </h3>
-                    </div>
-                    <p class="text-xs text-slate-400 mb-3 bg-slate-50 p-2 rounded-lg">
-                        <i class="ph ph-info"></i> 已排除：簽售會、事前錄製、錄製等行程
-                    </p>
-
+                    <div class="flex justify-between items-start mb-4"><h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就</h3></div>
+                    <p class="text-xs text-slate-400 mb-3 bg-slate-50 p-2 rounded-lg"><i class="ph ph-info"></i> 已排除：簽售會、事前錄製、錄製等行程</p>
                     <div v-if="statsData.series.length > 0" class="space-y-3">
-                        <div v-for="item in statsData.series" :key="item.title" class="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0">
-                            <span class="text-sm text-slate-600 truncate flex-1 pr-2 font-medium">{{ item.title }}</span>
-                            <span class="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-1 rounded-full">
-                                {{ item.count }} 場
-                            </span>
-                        </div>
+                        <div v-for="item in statsData.series" :key="item.title" class="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0"><span class="text-sm text-slate-600 truncate flex-1 pr-2 font-medium">{{ item.title }}</span><span class="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-1 rounded-full">{{ item.count }} 場</span></div>
                     </div>
-                    <div v-else class="text-center text-slate-400 text-sm py-4">
-                        尚未達成重複參加同名大型活動的成就
-                    </div>
+                    <div v-else class="text-center text-slate-400 text-sm py-4">尚未達成重複參加同名大型活動的成就</div>
                 </div>
             </div>
         </main>
 
-        <!-- FAB: 固定在右下角，高度適配 -->
-        <button @click="openModal()" 
-            :style="{ backgroundColor: themeColor }"
-            class="absolute bottom-24 right-6 w-14 h-14 text-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center transform transition-transform hover:scale-110 active:scale-95 z-20 mb-safe">
+        <!-- FAB -->
+        <button @click="openModal()" :style="{ backgroundColor: themeColor }"
+            class="absolute bottom-24 right-6 w-14 h-14 text-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center transform transition-transform hover:scale-110 active:scale-95 z-30 mb-safe">
             <i class="ph ph-plus text-2xl font-bold"></i>
         </button>
 
-        <!-- Bottom Navigation: 固定在底部，高度適配 Safe Area -->
-        <nav class="bg-white border-t border-slate-100 px-6 py-3 flex justify-between items-center shrink-0 w-full z-30 safe-pb">
+        <!-- Bottom Navigation -->
+        <nav class="bg-white border-t border-slate-100 px-6 py-3 flex justify-between items-center shrink-0 w-full z-40 safe-pb">
             <button @click="activeTab = 'home'" class="flex flex-col items-center gap-1 transition-colors w-16" 
-                :class="activeTab === 'home' ? '' : 'text-slate-400'"
-                :style="{ color: activeTab === 'home' ? themeColor : '' }">
+                :class="activeTab === 'home' ? '' : 'text-slate-400'" :style="{ color: activeTab === 'home' ? themeColor : '' }">
                 <i class="ph text-2xl ph-calendar-check" :class="{ 'ph-fill': activeTab === 'home', 'ph-bold': activeTab !== 'home' }"></i>
                 <span class="text-[10px] font-medium">行程</span>
             </button>
-            
+            <button @click="activeTab = 'map'" class="flex flex-col items-center gap-1 transition-colors w-16"
+                :class="activeTab === 'map' ? '' : 'text-slate-400'" :style="{ color: activeTab === 'map' ? themeColor : '' }">
+                <i class="ph text-2xl ph-map-trifold" :class="{ 'ph-fill': activeTab === 'map', 'ph-bold': activeTab !== 'map' }"></i>
+                <span class="text-[10px] font-medium">地圖</span>
+            </button>
             <button @click="activeTab = 'stats'" class="flex flex-col items-center gap-1 transition-colors w-16"
-                :class="activeTab === 'stats' ? '' : 'text-slate-400'"
-                :style="{ color: activeTab === 'stats' ? themeColor : '' }">
+                :class="activeTab === 'stats' ? '' : 'text-slate-400'" :style="{ color: activeTab === 'stats' ? themeColor : '' }">
                 <i class="ph text-2xl ph-chart-pie-slice" :class="{ 'ph-fill': activeTab === 'stats', 'ph-bold': activeTab !== 'stats' }"></i>
                 <span class="text-[10px] font-medium">回顧</span>
             </button>
@@ -412,118 +338,55 @@
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
                 <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal"></div>
                 <div class="bg-white w-full max-w-md max-h-[90vh] sm:rounded-2xl rounded-t-3xl p-6 relative flex flex-col shadow-2xl overflow-hidden h-auto mb-safe">
-                    
                     <div class="flex justify-between items-center mb-4 shrink-0">
                         <h2 class="text-xl font-bold text-slate-800">{{ isEditing ? '編輯行程' : '新增行程' }}</h2>
-                        <button @click="closeModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200">
-                            <i class="ph ph-x"></i>
-                        </button>
+                        <button @click="closeModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
                     </div>
-
                     <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32">
                         <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label>
-                                <input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                            </div>
-                            
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                             <div class="grid grid-cols-[1fr,60px] gap-3">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">歌手/團體</label>
-                                    <input v-model="form.artist" type="text" placeholder="例如: Taylor Swift" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">應援色</label>
-                                    <div class="h-[46px] w-full relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                                        <input v-model="form.color" type="color" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0">
-                                    </div>
-                                </div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">歌手/團體</label><input v-model="form.artist" type="text" placeholder="例如: Taylor Swift" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">應援色</label><div class="h-[46px] w-full relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><input v-model="form.color" type="color" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0"></div></div>
                             </div>
-
-                             <div>
-                                <label class="block text-sm font-medium text-slate-500 mb-1">座位/序號 (選填)</label>
-                                <div class="relative">
-                                    <i class="ph ph-chair absolute left-3 top-3.5 text-slate-400"></i>
-                                    <input v-model="form.seat" type="text" placeholder="例如: 搖滾A區 100號" class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                                </div>
-                            </div>
-
+                             <div><label class="block text-sm font-medium text-slate-500 mb-1">座位/序號 (選填)</label><div class="relative"><i class="ph ph-chair absolute left-3 top-3.5 text-slate-400"></i><input v-model="form.seat" type="text" placeholder="例如: 搖滾A區 100號" class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div></div>
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">日期</label>
-                                    <input v-model="form.date" type="date" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">時間</label>
-                                    <input v-model="form.time" type="time" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                                </div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">日期</label><input v-model="form.date" type="date" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">時間</label><input v-model="form.time" type="time" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                             </div>
-
                             <div>
-                                <label class="block text-sm font-medium text-slate-500 mb-1">地點 (用於導航)</label>
-                                <div class="relative">
-                                    <i class="ph ph-map-pin absolute left-3 top-3.5 text-slate-400"></i>
-                                    <input v-model="form.location" type="text" placeholder="例如: 台北小巨蛋" class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800">
+                                <label class="block text-sm font-medium text-slate-500 mb-1">地點 (用於地圖與導航)</label>
+                                <div class="flex gap-2">
+                                    <div class="relative flex-1">
+                                        <i class="ph ph-map-pin absolute left-3 top-3.5 text-slate-400"></i>
+                                        <input v-model="form.location" type="text" placeholder="例如: 台北小巨蛋" class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800">
+                                    </div>
+                                    <button @click="searchCoordinates" class="bg-blue-50 text-blue-600 px-3 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center shrink-0">
+                                        <i v-if="isSearching" class="ph ph-spinner animate-spin text-xl"></i>
+                                        <span v-else class="text-xs font-bold flex flex-col items-center leading-tight"><i class="ph ph-crosshair text-lg"></i>定位</span>
+                                    </button>
                                 </div>
+                                <div v-if="form.lat && form.lng" class="text-[10px] text-green-600 mt-1 flex items-center gap-1"><i class="ph ph-check-circle-fill"></i> 已取得座標 ({{ form.lat.toFixed(4) }}, {{ form.lng.toFixed(4) }})</div>
+                                <div v-if="searchError" class="text-[10px] text-red-500 mt-1">{{ searchError }}</div>
                             </div>
                         </div>
-
                         <hr class="border-slate-100 my-2">
-
                         <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-slate-700">必帶清單 ✅</label>
-                                <button @click="addDefaultChecklist" class="text-xs text-primary hover:underline" :style="{color: themeColor}">加入常用項目</button>
-                            </div>
-                            <div class="space-y-2 mb-2">
-                                <div v-for="(item, index) in form.checklist" :key="index" class="flex gap-2 items-center">
-                                    <input v-model="item.text" type="text" placeholder="項目" class="flex-1 bg-slate-50 border-none rounded-lg p-2 text-sm">
-                                    <button @click="removeChecklistItem(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-x"></i></button>
-                                </div>
-                            </div>
+                            <div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-slate-700">必帶清單 ✅</label><button @click="addDefaultChecklist" class="text-xs text-primary hover:underline" :style="{color: themeColor}">加入常用項目</button></div>
+                            <div class="space-y-2 mb-2"><div v-for="(item, index) in form.checklist" :key="index" class="flex gap-2 items-center"><input v-model="item.text" type="text" placeholder="項目" class="flex-1 bg-slate-50 border-none rounded-lg p-2 text-sm"><button @click="removeChecklistItem(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-x"></i></button></div></div>
                             <button @click="addChecklistItem" class="w-full py-2 bg-slate-50 text-slate-500 text-xs rounded-lg border border-dashed border-slate-300 hover:bg-slate-100">+ 新增檢查項目</button>
                         </div>
-
                         <hr class="border-slate-100 my-2">
-
                         <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-slate-700">詳細支出記帳 💰</label>
-                                <span class="text-xs font-bold" :style="{ color: themeColor }">總計: ${{ formatMoney(calculateTotal(form.expenses)) }}</span>
-                            </div>
-                            
-                            <div class="space-y-2 mb-3">
-                                <div v-for="(exp, index) in form.expenses" :key="index" class="grid grid-cols-[1fr,1fr,auto] gap-2 items-center">
-                                    <input v-model="exp.item" type="text" placeholder="項目" class="w-full bg-slate-50 border-none rounded-lg p-2 text-sm">
-                                    <input v-model.number="exp.amount" type="number" placeholder="金額" class="w-full bg-slate-50 border-none rounded-lg p-2 text-sm text-right">
-                                    <button @click="removeExpenseItem(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-minus-circle text-lg"></i></button>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                                <button @click="addExpenseItem('門票')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 門票</button>
-                                <button @click="addExpenseItem('交通')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 交通</button>
-                                <button @click="addExpenseItem('住宿')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 住宿</button>
-                                <button @click="addExpenseItem('周邊')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 周邊</button>
-                            </div>
+                            <div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-slate-700">詳細支出記帳 💰</label><span class="text-xs font-bold" :style="{ color: themeColor }">總計: ${{ formatMoney(calculateTotal(form.expenses)) }}</span></div>
+                            <div class="space-y-2 mb-3"><div v-for="(exp, index) in form.expenses" :key="index" class="grid grid-cols-[1fr,1fr,auto] gap-2 items-center"><input v-model="exp.item" type="text" placeholder="項目" class="w-full bg-slate-50 border-none rounded-lg p-2 text-sm"><input v-model.number="exp.amount" type="number" placeholder="金額" class="w-full bg-slate-50 border-none rounded-lg p-2 text-sm text-right"><button @click="removeExpenseItem(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-minus-circle text-lg"></i></button></div></div>
+                            <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar"><button @click="addExpenseItem('門票')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 門票</button><button @click="addExpenseItem('交通')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 交通</button><button @click="addExpenseItem('住宿')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 住宿</button><button @click="addExpenseItem('周邊')" class="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200 hover:bg-slate-200">+ 周邊</button></div>
                         </div>
-
                         <hr class="border-slate-100 my-2">
-
-                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">心得筆記 📝</label>
-                            <textarea v-model="form.memo" placeholder="寫下你的應援心情、觀後感..." class="w-full h-24 bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/50 text-slate-800 resize-none"></textarea>
-                        </div>
-
+                         <div><label class="block text-sm font-medium text-slate-700 mb-1">心得筆記 📝</label><textarea v-model="form.memo" placeholder="寫下你的應援心情、觀後感..." class="w-full h-24 bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/50 text-slate-800 resize-none"></textarea></div>
                     </div>
-
                     <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
-                        <button @click="saveEvent" 
-                                :style="{ backgroundColor: themeColor }"
-                                class="w-full text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2">
-                            <i class="ph ph-check-circle text-xl"></i>
-                            {{ isEditing ? '儲存變更' : '加入行程' }}
-                        </button>
+                        <button @click="saveEvent" :style="{ backgroundColor: themeColor }" class="w-full text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2"><i class="ph ph-check-circle text-xl"></i> {{ isEditing ? '儲存變更' : '加入行程' }}</button>
                     </div>
                 </div>
             </div>
@@ -534,17 +397,9 @@
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
                 <h3 class="font-bold text-lg mb-4 text-slate-700">APP 全域主題色 🎨</h3>
                 <div class="grid grid-cols-4 gap-3 mb-6">
-                    <button v-for="color in presetColors" :key="color" 
-                        @click="setTheme(color)"
-                        class="w-12 h-12 rounded-full shadow-sm transition-transform hover:scale-110 border-2"
-                        :class="themeColor === color ? 'border-slate-800' : 'border-transparent'"
-                        :style="{ backgroundColor: color }">
-                    </button>
+                    <button v-for="color in presetColors" :key="color" @click="setTheme(color)" class="w-12 h-12 rounded-full shadow-sm transition-transform hover:scale-110 border-2" :class="themeColor === color ? 'border-slate-800' : 'border-transparent'" :style="{ backgroundColor: color }"></button>
                 </div>
-                <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl">
-                    <span class="text-sm text-slate-500">自訂:</span>
-                    <input type="color" v-model="themeColor" class="w-full h-8 cursor-pointer rounded bg-transparent">
-                </div>
+                <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl"><span class="text-sm text-slate-500">自訂:</span><input type="color" v-model="themeColor" class="w-full h-8 cursor-pointer rounded bg-transparent"></div>
                 <button @click="showThemeModal = false" class="mt-4 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
         </div>
@@ -555,19 +410,14 @@
                 <h3 class="font-bold text-lg mb-2 text-slate-700">批次匯入行程</h3>
                 <p class="text-xs text-slate-400 mb-4">支援 JSON 格式 (YYMMDD)</p>
                 <textarea v-model="importJson" class="w-full h-40 bg-slate-50 border rounded-xl p-3 text-xs font-mono mb-4 leading-relaxed" placeholder='[{"日期": 230422, "歌手": "Taemin", "活動名稱": "RE : ACT", "地點": "首爾"}]'></textarea>
-                <div class="flex gap-2">
-                    <button @click="showImportModal = false" class="flex-1 py-2 text-slate-500">取消</button>
-                    <button @click="processImport" 
-                            :style="{ backgroundColor: themeColor }"
-                            class="flex-1 text-white py-2 rounded-lg font-bold shadow-sm">匯入</button>
-                </div>
+                <div class="flex gap-2"><button @click="showImportModal = false" class="flex-1 py-2 text-slate-500">取消</button><button @click="processImport" :style="{ backgroundColor: themeColor }" class="flex-1 text-white py-2 rounded-lg font-bold shadow-sm">匯入</button></div>
             </div>
         </div>
 
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
         createApp({
             setup() {
@@ -578,16 +428,20 @@
                 const selectedYear = ref('ALL');
                 const expandedEventId = ref(null);
                 const isPrivacyMode = ref(true);
+                const isSearching = ref(false);
+                const searchError = ref('');
                 
                 const showModal = ref(false);
                 const showThemeModal = ref(false);
                 const showImportModal = ref(false);
                 const isEditing = ref(false);
                 const importJson = ref('');
+                let map = null;
+                let markers = [];
 
                 const defaultForm = {
                     id: null, title: '', artist: '', date: '', time: '19:00', location: '', 
-                    seat: '', color: '#63b3b0', expenses: [], checklist: [], memo: ''
+                    seat: '', color: '#63b3b0', expenses: [], checklist: [], memo: '', lat: null, lng: null
                 };
                 const form = ref({ ...defaultForm });
 
@@ -613,6 +467,15 @@
 
                 watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
                 watch(themeColor, (newVal) => localStorage.setItem('idolTheme', newVal));
+                
+                // Watch active tab to init map
+                watch(activeTab, (newTab) => {
+                    if (newTab === 'map') {
+                        nextTick(() => {
+                            initMap();
+                        });
+                    }
+                });
 
                 const adjustColor = (color, amount) => {
                     let hex = color.replace('#', '');
@@ -633,10 +496,7 @@
                     '--primary-light': adjustColor(themeColor.value, 150)
                 }));
 
-                const getEventColor = (event) => {
-                    if (!event.color || event.color === '') return themeColor.value;
-                    return event.color;
-                };
+                const getEventColor = (event) => (!event.color || event.color === '') ? themeColor.value : event.color;
 
                 const greetingMessage = computed(() => {
                     const hour = new Date().getHours();
@@ -652,15 +512,10 @@
                         : sorted.filter(e => e.date < today).reverse();
                 });
 
-                const upcomingCount = computed(() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    return events.value.filter(e => e.date >= today).length;
-                });
-
+                const upcomingCount = computed(() => events.value.filter(e => e.date >= new Date().toISOString().split('T')[0]).length);
                 const currentYearExpense = computed(() => {
                     const y = new Date().getFullYear().toString();
-                    return events.value.filter(e => e.date.startsWith(y))
-                        .reduce((sum, e) => sum + calculateTotal(e.expenses), 0);
+                    return events.value.filter(e => e.date.startsWith(y)).reduce((sum, e) => sum + calculateTotal(e.expenses), 0);
                 });
 
                 const availableYears = computed(() => {
@@ -699,13 +554,10 @@
                     return { count, totalSpent, topArtists: sortedArtists, maxArtistCount, series };
                 });
 
-                // ** Mood Text Logic **
                 const emotionalSummary = computed(() => {
                     const { count, totalSpent, topArtists } = statsData.value;
+                    if (count === 0) return "準備好開啟新的追星旅程了嗎？🌟";
                     
-                    // Fallback for empty state
-                    if (count === 0) return "準備好開啟新的追星旅程了嗎？存錢蓄力中！🔋";
-
                     let mainArtist = topArtists.length > 0 ? topArtists[0].name : "他們";
                     
                     // Categorization Logic
@@ -750,11 +602,12 @@
                     };
 
                     const messages = pools[category];
-                    // Simple deterministic randomness based on count (so it doesn't flicker wildly)
                     return messages[count % messages.length];
                 });
 
-                // Methods
+                const mappedEventsCount = computed(() => events.value.filter(e => e.lat && e.lng).length);
+                const missingCoordsCount = computed(() => events.value.length - mappedEventsCount.value);
+
                 const calculateTotal = (expenses) => expenses ? expenses.reduce((sum, i) => sum + (Number(i.amount)||0), 0) : 0;
                 const addExpenseItem = (n) => form.value.expenses.push({ item: n, amount: '' });
                 const removeExpenseItem = (i) => form.value.expenses.splice(i, 1);
@@ -770,6 +623,7 @@
                 const openModal = () => {
                     isEditing.value = false;
                     form.value = { ...defaultForm, date: new Date().toISOString().split('T')[0], color: themeColor.value, expenses: [{item:'門票', amount:''}], checklist:[], memo:'' };
+                    searchError.value = '';
                     showModal.value = true;
                 };
 
@@ -779,10 +633,73 @@
                     if(!form.value.color) form.value.color = themeColor.value;
                     if(!form.value.checklist) form.value.checklist = [];
                     if(!form.value.expenses) form.value.expenses = [];
+                    searchError.value = '';
                     showModal.value = true;
                 };
 
                 const closeModal = () => showModal.value = false;
+
+                const searchCoordinates = async () => {
+                    if (!form.value.location) {
+                        searchError.value = "請先輸入地點名稱";
+                        return;
+                    }
+                    isSearching.value = true;
+                    searchError.value = '';
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.value.location)}`);
+                        const data = await response.json();
+                        if (data && data.length > 0) {
+                            form.value.lat = parseFloat(data[0].lat);
+                            form.value.lng = parseFloat(data[0].lon);
+                        } else {
+                            searchError.value = "找不到該地點，請嘗試更具體的名稱 (如: 台北市小巨蛋)";
+                        }
+                    } catch (e) {
+                        searchError.value = "連線錯誤，請稍後再試";
+                    } finally {
+                        isSearching.value = false;
+                    }
+                };
+
+                const initMap = () => {
+                    if (!map) {
+                        map = L.map('map-container').setView([23.6978, 120.9605], 7); // Default Center Taiwan
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors'
+                        }).addTo(map);
+                    } else {
+                        map.invalidateSize();
+                    }
+
+                    // Clear existing markers
+                    markers.forEach(m => map.removeLayer(m));
+                    markers = [];
+
+                    // Add markers for events with coordinates
+                    const validEvents = events.value.filter(e => e.lat && e.lng);
+                    const bounds = [];
+
+                    validEvents.forEach(e => {
+                        const color = getEventColor(e);
+                        const marker = L.circleMarker([e.lat, e.lng], {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map);
+                        
+                        marker.bindPopup(`<b>${e.artist}</b><br>${e.title}<br>${e.date}`);
+                        markers.push(marker);
+                        bounds.push([e.lat, e.lng]);
+                    });
+
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                };
 
                 const saveEvent = () => {
                     if (!form.value.title || !form.value.date) return alert('請填寫活動名稱與日期 🥺');
@@ -843,12 +760,12 @@
                                 return { 
                                     id: Date.now() + Math.random().toString(), 
                                     title, artist, date: formattedDate, time, location, color, 
-                                    expenses, seat, memo, checklist: [] 
+                                    expenses, seat, memo, checklist: [], lat: null, lng: null
                                 };
                             });
                             events.value = [...events.value, ...newEvts];
                             showImportModal.value = false;
-                            alert(`成功匯入 ${newEvts.length} 筆！`);
+                            alert(`成功匯入 ${newEvts.length} 筆！請手動定位以顯示於地圖。`);
                         } else { alert('格式錯誤：必須是陣列 (Array)'); }
                     } catch(e) { alert('JSON 格式錯誤'); }
                 };
@@ -866,12 +783,11 @@
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleThemeModal, setTheme, updateCustomTheme, processImport, 
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
-                    getEventColor, emotionalSummary, availableYears
+                    getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount
                 };
             }
         }).mount('#app');
     </script>
 </body>
 </html>
-
 
