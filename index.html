@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的追星日記 🌟</title>
+    <title>追星日記 🌟</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -11,7 +11,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons CSS -->
+    <!-- Phosphor Icons -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
@@ -276,6 +276,7 @@
                 
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
+                    
                     <button @click="showImportModal = true" 
                             :style="{ backgroundColor: themeColor }"
                             class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
@@ -283,20 +284,17 @@
                     </button>
                 </div>
 
-                <!-- Year Filter (Fix: Removed 'ALL' option) -->
+                <!-- Year Filter & Emotional Summary -->
                 <div class="space-y-4">
                     <div class="relative">
                         <select v-model="selectedYear" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-8 rounded-xl font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                            <!-- 已移除全部年份選項，強制使用者選擇年份 -->
+                            <option value="ALL">🗓️ 全部年份總回顧</option>
                             <option v-for="year in availableYears" :key="year" :value="year">
                                 {{ year }} 年度回顧
                             </option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
                             <i class="ph ph-caret-down-bold"></i>
-                        </div>
-                        <div v-if="availableYears.length === 0" class="text-xs text-center text-slate-400 mt-2">
-                            尚無歷史行程數據
                         </div>
                     </div>
 
@@ -347,7 +345,7 @@
                         </div>
                     </div>
                     <div v-else class="text-center text-slate-400 text-sm py-4">
-                        {{ selectedYear ? `${selectedYear} 年無資料` : '請匯入或新增行程' }}
+                        區間內無資料
                     </div>
                 </div>
 
@@ -569,7 +567,7 @@
                 const activeTab = ref('home');
                 const viewMode = ref('upcoming');
                 const themeColor = ref('#63b3b0'); 
-                const selectedYear = ref(''); // Default empty, will auto-select
+                const selectedYear = ref('ALL');
                 const expandedEventId = ref(null);
                 const isPrivacyMode = ref(true);
                 
@@ -603,13 +601,6 @@
                     }
                     const savedTheme = localStorage.getItem('idolTheme');
                     if (savedTheme) themeColor.value = savedTheme;
-                    
-                    // Init selection to current year or latest
-                    if (availableYears.value.length > 0) {
-                        selectedYear.value = availableYears.value[0];
-                    } else {
-                        selectedYear.value = new Date().getFullYear().toString();
-                    }
                 });
 
                 watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
@@ -664,34 +655,21 @@
                         .reduce((sum, e) => sum + calculateTotal(e.expenses), 0);
                 });
 
-                // ** 年度選單邏輯 (Revised for robustness) **
+                // 年度選單邏輯 (v21 恢復總年度選項)
                 const availableYears = computed(() => {
                     const years = new Set(events.value.map(e => {
-                        // Regex to grab the first 4 digits as year
                         const match = e.date.match(/^(\d{4})/);
                         return match ? match[1] : null;
                     }).filter(y => y !== null));
-                    return Array.from(years).sort((a, b) => b - a); // Descending
-                });
-                
-                // Watcher to auto-select latest year when data changes (e.g. import)
-                watch(availableYears, (newYears) => {
-                    // If current selection is invalid or empty, pick the first one (latest)
-                    if (newYears.length > 0 && !newYears.includes(selectedYear.value)) {
-                        selectedYear.value = newYears[0];
-                    }
+                    return Array.from(years).sort((a, b) => b - a);
                 });
 
                 const statsData = computed(() => {
                     let targetEvents = events.value;
-                    // Strict filtering by selected year
-                    if (selectedYear.value) {
+                    // 如果選擇的不是 'ALL'，則進行過濾
+                    if (selectedYear.value !== 'ALL') {
                         targetEvents = events.value.filter(e => e.date.match(new RegExp(`^${selectedYear.value}`)));
-                    } else {
-                        // If no year selected (no data), empty array
-                        targetEvents = [];
                     }
-
                     const count = targetEvents.length;
                     const totalSpent = targetEvents.reduce((acc, curr) => acc + calculateTotal(curr.expenses), 0);
                     
@@ -715,18 +693,65 @@
                     return { count, totalSpent, topArtists: sortedArtists, maxArtistCount, series };
                 });
 
+                // ** v22 新增：20+ 句情緒價值語錄 **
                 const emotionalSummary = computed(() => {
                     const { count, totalSpent, topArtists } = statsData.value;
-                    if (count === 0) return "準備好開啟新的追星旅程了嗎？🌟";
+                    const mainArtist = topArtists.length > 0 ? topArtists[0].name : "他們";
                     
-                    let mainArtist = topArtists.length > 0 ? topArtists[0].name : "他們";
+                    // 分類邏輯
+                    let category = 'balanced';
+                    if (count === 0) category = 'zero';
+                    else if (count >= 15) category = 'high_freq';
+                    else if (totalSpent >= 50000) category = 'high_spend';
+                    else if (count <= 2) category = 'low_freq';
                     
-                    if (count > 20) return `哇！這一年你為了見${mainArtist}真的拚盡全力了！🔥`;
-                    if (totalSpent > 50000) return "錢錢沒有不見，變成了喜歡的樣子！💸";
-                    if (count > 5) return `每一場相遇都是奇蹟，謝謝${mainArtist}帶給你的力量 ✨`;
-                    return "重質不重量，這些回憶會陪伴你很久很久 💖";
+                    // 語錄庫
+                    const pools = {
+                        zero: [
+                            "準備好開啟新的追星旅程了嗎？存錢蓄力中！🔋",
+                            "暫時的休息是為了走更長遠的路，愛一直在！🌟",
+                            "這一年在沈澱，為了明年飛得更高 🚀",
+                            "雖然沒有現場見面，但你的心意他們一定收到了 📡"
+                        ],
+                        high_freq: [
+                            `哇！這一年你為了見${mainArtist}真的拚盡全力了！🔥`,
+                            `你的足跡踏遍了各個場館，是名副其實的追星模範生！🏆`,
+                            "體力好、熱情足，這一年你過得比誰都充實！✨",
+                            `見面次數多到連${mainArtist}都快認得你了吧？😂`,
+                            "回顧這一年，滿滿的票根就是你愛的證明！❤️",
+                            "這就是「用愛發電」的最佳寫照！⚡️"
+                        ],
+                        high_spend: [
+                            "錢錢沒有不見，變成了喜歡的樣子！💸",
+                            "投資在快樂上，是世界上最划算的交易！📈",
+                            "雖然錢包瘦了，但心靈超級富足啊！🥰",
+                            "努力工作就是為了這一刻，你值得擁有這些美好！💪",
+                            "這筆支出叫做「精神糧食費」，一點都不貴！🍚",
+                            "所謂的財富自由，就是能隨心所欲地去見想見的人！💰"
+                        ],
+                        balanced: [
+                            `重質不重量，每一次見面都是奇蹟 ✨`,
+                            "剛剛好的距離，剛剛好的愛，這一年很完美！🌸",
+                            "生活與追星的完美平衡，你是時間管理大師！⏰",
+                            "細水長流的愛，才是最長情的告白 💌",
+                            "每一次見面，都為這一年增添了閃亮的色彩 🎨",
+                            `謝謝${mainArtist}，成為你平凡日子裡的一束光 💡`
+                        ],
+                        low_freq: [
+                            "好的開始是成功的一半，期待明年更多相遇！🌱",
+                            "那一天的回憶，足夠溫暖整個寒冬 ❄️",
+                            "雖然見面次數不多，但愛意絲毫不減！💖",
+                            "把那一次的感動好好收藏，那是你的獨家記憶 🗝️",
+                            "小小的幸福，累積成大大的快樂！🥰"
+                        ]
+                    };
+
+                    const messages = pools[category];
+                    // 隨機選一句
+                    return messages[Math.floor(Math.random() * messages.length)];
                 });
 
+                // Methods
                 const calculateTotal = (expenses) => expenses ? expenses.reduce((sum, i) => sum + (Number(i.amount)||0), 0) : 0;
                 const addExpenseItem = (n) => form.value.expenses.push({ item: n, amount: '' });
                 const removeExpenseItem = (i) => form.value.expenses.splice(i, 1);
