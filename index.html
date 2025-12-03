@@ -44,6 +44,7 @@
         
         // 輔助函數：將 HEX 轉換為 Tailwind Border Class
         const hexToBorderClass = (hex) => {
+             // 移除 # 符號，用於 CSS 變數或直接作為類名（雖然不是標準 Tailwind）
             return `border-[${hex.startsWith('#') ? hex : '#' + hex}]`;
         };
 
@@ -94,13 +95,14 @@
                 const showImportModal = ref(false); 
                 const showDailyItemModal = ref(false); 
 
-                // 編輯表單的暫存狀態 - ADDED baseTicketExpense
+                // 編輯表單的暫存狀態 - ADDED time
                 const editEventForm = ref({
                     eventName: '',
                     artistName: '',
                     date: '',
+                    time: '', // NEW: 活動時間
                     mainLocation: '',
-                    baseTicketExpense: 0, // NEW
+                    baseTicketExpense: 0,
                     id: null
                 });
 
@@ -226,7 +228,7 @@
                         const dailyTotal = event.dailyItems 
                             ? event.dailyItems.reduce((sum, item) => sum + (item.expenseAmount || 0), 0) 
                             : 0;
-                        const ticketExpense = parseFloat(event.baseTicketExpense || 0); // NEW
+                        const ticketExpense = parseFloat(event.baseTicketExpense || 0); 
                         const eventTotal = dailyTotal + ticketExpense;
 
                         totalExpense += eventTotal;
@@ -447,8 +449,7 @@
                     if (!newEventName.value || !newArtistName.value || !newEventDate.value) return; 
                     if (!userId.value) { console.error("Authentication not ready."); return; }
                     const eventDate = new Date(newEventDate.value); const eventYear = eventDate.getFullYear();
-                    // Initialize with 0 for baseTicketExpense
-                    const newEvent = { eventName: newEventName.value, artistName: newArtistName.value, year: eventYear, date: newEventDate.value, mainLocation: newEventLocation.value, dailyItems: [], baseTicketExpense: 0, participants: ['我'] };
+                    const newEvent = { eventName: newEventName.value, artistName: newArtistName.value, year: eventYear, date: newEventDate.value, mainLocation: newEventLocation.value, dailyItems: [], expenses: [], participants: ['我'] };
                     try {
                         const docRef = await addDoc(getEventCollectionRef(), newEvent); activeEventId.value = docRef.id; showEventModal.value = false;
                         newEventName.value = ''; newArtistName.value = ''; newEventDate.value = ''; newEventLocation.value = '';
@@ -474,8 +475,9 @@
                         eventName: currentEvent.value.eventName,
                         artistName: currentEvent.value.artistName,
                         date: currentEvent.value.date,
+                        time: currentEvent.value.time || '', // LOAD TIME
                         mainLocation: currentEvent.value.mainLocation,
-                        baseTicketExpense: parseFloat(currentEvent.value.baseTicketExpense || 0), // LOAD NEW FIELD
+                        baseTicketExpense: parseFloat(currentEvent.value.baseTicketExpense || 0), 
                         id: currentEvent.value.id
                     };
                     showEditModal.value = true;
@@ -488,9 +490,10 @@
                         eventName: editEventForm.value.eventName, 
                         artistName: editEventForm.value.artistName, 
                         date: newDate, 
+                        time: editEventForm.value.time, // SAVE TIME
                         year: newYear, 
                         mainLocation: editEventForm.value.mainLocation,
-                        baseTicketExpense: parseFloat(editEventForm.value.baseTicketExpense) || 0 // SAVE NEW FIELD
+                        baseTicketExpense: parseFloat(editEventForm.value.baseTicketExpense) || 0 
                     };
                     try { await updateDoc(doc(getEventCollectionRef(), editEventForm.value.id), updatedData); showEditModal.value = false; } 
                     catch (e) { console.error("Error saving edited document: ", e); }
@@ -799,6 +802,7 @@
                                 <p class="font-bold text-gray-800">{{ event.eventName }} ({{ event.artistName }})</p>
                                 <p class="text-sm text-gray-600 flex justify-between">
                                     <span>📅 {{ event.date }}</span>
+                                    <!-- Removed Navigation Button per request -->
                                 </p>
                             </div>
                         </div>
@@ -825,7 +829,7 @@
                             </div>
 
                             <!-- 現有支出列表 -->
-                            <div v-if="currentEvent.dailyItems && currentEvent.dailyItems.filter(item => item.expenseAmount > 0).length > 0" class="space-y-3 mb-6">
+                            <div v-if="currentEvent.dailyItems && currentEvent.dailyItems.length > 0" class="space-y-3 mb-6">
                                 <h3 class="font-semibold text-gray-700 border-b pb-1">支出紀錄 (來自每日行程項目)</h3>
                                 <div v-for="item in currentEvent.dailyItems.filter(item => item.expenseAmount > 0)" :key="item.id"
                                     class="flex justify-between items-center p-3 bg-white border-l-4 border-app-theme-400">
@@ -833,6 +837,7 @@
                                         <p class="font-bold text-gray-800">{{ item.expenseDescription || item.description }}</p>
                                         <p class="text-sm text-red-600 font-semibold">NT$ {{ item.expenseAmount.toFixed(2) }}</p>
                                     </div>
+                                    <!-- Delete functionality removed as it should be done in schedule editor -->
                                 </div>
                             </div>
                             <div v-else class="text-center p-4 text-gray-500 border border-dashed rounded-xl mb-4">
@@ -853,7 +858,9 @@
                                 <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-app-theme-400 space-y-4">
                                     <!-- UPDATED: Date and Location emphasized -->
                                     <div class="text-center space-y-2">
-                                        <p class="text-5xl font-extrabold text-app-theme-800">{{ currentEvent.date }}</p>
+                                        <p class="text-5xl font-extrabold text-app-theme-800">{{ currentEvent.date }}
+                                            <span v-if="currentEvent.time" class="text-2xl ml-2 block sm:inline text-app-theme-600">{{ currentEvent.time }}</span>
+                                        </p>
                                         <p class="text-xl font-bold text-gray-800">{{ currentEvent.mainLocation || '未設定' }}</p>
                                     </div>
                                     <!-- END UPDATED -->
@@ -979,7 +986,7 @@
                                         class="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border-l-4"
                                         :class="getFanColorClass(event.artistName)">
                                         <p class="font-bold text-gray-700">{{ event.eventName }}</p>
-                                        <p class="text-sm text-gray-500">{{ event.artistName }} - {{ event.date }}</p>
+                                        <p class="text-sm text-gray-600">{{ event.artistName }} - {{ event.date }}</p>
                                     </div>
                                 </div>
                                 <div v-else class="text-center p-3 text-gray-500 text-sm">
@@ -995,14 +1002,14 @@
             <!-- 底部導航列 -->
             <nav class="bg-white border-t border-gray-200 sticky bottom-0 z-10 shadow-t-lg">
                 <div class="flex justify-around">
-                    <!-- 1. 行程/記帳 (Schedule/Info/Expense) -->
+                    <!-- 1. 行程 (Schedule/Info) -->
                     <button @click="goToEventList()"
                             class="flex flex-col items-center p-3 w-1/3 transition"
-                            :class="activeTab !== 'review' && !showColorModal ? `text-app-theme-500 border-t-2 border-app-theme-500` : 'text-gray-500'">
+                            :class="activeTab === 'schedule' || activeTab === 'info' ? `text-app-theme-500 border-t-2 border-app-theme-500` : 'text-gray-500'">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                         </svg>
-                        <span class="text-xs mt-1">行程/記帳</span>
+                        <span class="text-xs mt-1">行程</span>
                     </button>
                     <!-- 2. 回顧 (Review) -->
                     <button @click="setActiveTab('review')"
@@ -1019,7 +1026,7 @@
                             :class="showColorModal ? `text-app-theme-500 border-t-2 border-app-theme-500` : 'text-gray-500'">
                         <!-- Settings Icon (Gear) -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.44a2 2 0 0 1-2 2h-.44a2 2 0 0 0-2 2v.44a2 2 0 0 1-2 2H2a2 2 0 0 0-2 2v.44a2 2 0 0 1 2 2h.44a2 2 0 0 0 2 2v.44a2 2 0 0 1 2 2h.44a2 2 0 0 0 2 2v.44a2 2 0 0 1 2 2h.44a2 2 0 0 0 2-2v-.44a2 2 0 0 1 2-2h.44a2 2 0 0 0 2-2v-.44a2 2 0 0 1 2-2h.44a2 2 0 002-2v-.44a2 2 0 0 1-2-2h-.44a2 2 0 00-2-2v-.44a2 2 0 0 1-2-2h-.44a2 2 0 00-2-2z"/>
+                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.44a2 2 0 0 1-2 2h-.44a2 2 0 0 0-2 2v.44a2 2 0 0 1 2 2h.44a2 2 0 0 0 2 2v.44a2 2 0 0 1 2 2h.44a2 2 0 0 0 2 2v.44a2 2 0 0 1 2 2h.44a2 2 0 0 0 2-2v-.44a2 2 0 0 1 2-2h-.44a2 2 0 0 0-2-2v-.44a2 2 0 0 1-2-2h-.44a2 2 0 0 0-2-2z"/>
                             <circle cx="12" cy="12" r="3"/>
                         </svg>
                         <span class="text-xs mt-1">設定</span>
@@ -1027,7 +1034,7 @@
                 </div>
             </nav>
 
-            <!-- Modal for New Event (單獨新增) -->
+            <!-- Modal for New Event (手動新增行程) -->
             <div v-if="showEventModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
                 <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
                     <h2 class="text-xl font-bold text-app-theme-700">新增追星行程</h2>
@@ -1059,7 +1066,7 @@
                 </div>
             </div>
 
-            <!-- Modal for CSV Import (批次匯入) -->
+            <!-- Modal for CSV Import (批次匯入行程) -->
             <div v-if="showImportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
                 <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
                     <h2 class="text-xl font-bold text-app-theme-700">批次匯入行程 (CSV)</h2>
@@ -1122,6 +1129,10 @@
                         
                         <label for="editEventDate" class="block text-sm font-medium text-gray-700 pt-2">活動日期 (必填):</label>
                         <input type="date" id="editEventDate" v-model="editEventForm.date" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-app-theme-400 focus:border-app-theme-400">
+
+                        <label for="editEventTime" class="block text-sm font-medium text-gray-700 pt-2">活動時間 (非必填):</label>
+                        <input type="time" id="editEventTime" v-model="editEventForm.time" 
                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-app-theme-400 focus:border-app-theme-400">
 
                         <input type="text" v-model="editEventForm.mainLocation" placeholder="主要地點"
@@ -1215,7 +1226,7 @@
                         <div v-if="Object.keys(fanColors).length > 0" class="space-y-2">
                             <div v-for="(color, artist) in fanColors" :key="artist"
                                  class="flex justify-between items-center p-2 bg-gray-50 rounded-lg border-l-4"
-                                 :class="hexToBorderClass(color)">
+                                 :class="getFanColorClass(artist)">
                                 
                                 <span class="font-medium text-gray-800">{{ artist }}</span>
                                 <div class="flex items-center space-x-2">
@@ -1238,7 +1249,7 @@
                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-app-theme-400 focus:border-app-theme-400">
                         
                         <input type="text" v-model="newColorClass" placeholder="顏色代碼 (必須是 #XXXXXX 格式)"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-app-theme-400 focus:border-app-theme-400">
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-app-theme-400 focus:border-app-theme-400 uppercase">
                         
                         <button @click="addOrUpdateColor"
                                 :disabled="!newColorArtist || !newColorClass"
