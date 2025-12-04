@@ -22,9 +22,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Quicksand:wght@500;700&family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -291,8 +289,6 @@
                                     </div>
                                     
                                     <div class="flex gap-3 items-center">
-                                        <button @click.stop="openShareImageModal(event)" class="text-slate-400 hover:text-primary"><i class="ph ph-share-fat text-lg"></i></button>
-
                                         <div class="flex gap-2">
                                             <button @click.stop="editEvent(event)" class="text-slate-400 hover:text-blue-500"><i class="ph ph-pencil-simple text-lg"></i></button>
                                             <button @click.stop="deleteEvent(event.id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
@@ -435,28 +431,6 @@
         </nav>
 
         <transition name="fade">
-            <div v-if="showShareImageModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="showShareImageModal = false">
-                <div class="w-full max-w-sm transform transition-all relative" @click.stop>
-                    <div class="bg-white rounded-2xl shadow-2xl p-5 text-center">
-                        <h3 class="font-bold text-lg mb-4 text-slate-700">生成分享圖片 ✨</h3>
-                        <canvas id="shareCanvas" width="400" height="300" class="w-full rounded-xl shadow-lg border border-slate-100 mb-4 mx-auto"></canvas>
-                        
-                        <p class="text-xs text-slate-500 mb-3">右鍵/長按圖片可選擇儲存或複製。</p>
-
-                        <div class="flex gap-3">
-                            <button @click="downloadShareImage" :style="{ backgroundColor: themeColor }" class="flex-1 text-white py-3 rounded-lg font-bold shadow-md hover:opacity-90 transition-opacity">
-                                <i class="ph ph-download-simple"></i> 下載圖片
-                            </button>
-                            <button @click="showShareImageModal = false" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-lg font-bold shadow-md hover:bg-slate-300 transition-colors">
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="fade">
             <div v-if="showTicketModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="showTicketModal = false">
                 <div class="w-full max-w-xs transform transition-all relative" @click.stop>
                     <div class="ticket-stub bg-white rounded-3xl overflow-hidden relative text-slate-800">
@@ -497,6 +471,115 @@
             </div>
         </transition>
 
+        <div v-if="showSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showSettingsModal = false">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
+                <h3 class="font-bold text-lg mb-4 text-slate-700">資料與主題設定 ⚙️</h3>
+                
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <p class="text-xs font-medium text-slate-500 mb-2">App 標題</p>
+                    <input type="text" v-model="customTitle" @input="updateAppTitle" placeholder="例如：我的追星天堂"
+                           class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-primary/50 focus:border-primary/50">
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-xs text-slate-400 mb-2">全域主題色</p>
+                    <div class="grid grid-cols-4 gap-3 mb-3">
+                        <button v-for="color in presetColors" :key="color" @click="setTheme(color)" class="w-12 h-12 rounded-full shadow-sm transition-transform hover:scale-110 border-2" :class="themeColor === color ? 'border-slate-800' : 'border-transparent'" :style="{ backgroundColor: color }"></button>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl"><span class="text-sm text-slate-500">自訂:</span><input type="color" v-model="themeColor" @input="setTheme(themeColor)" class="w-full h-8 cursor-pointer rounded bg-transparent"></div>
+                </div>
+                <hr class="border-slate-100 my-4">
+                <div class="mb-4">
+                    <p class="text-xs text-slate-400 mb-2">資料備份與轉移</p>
+                    <div class="flex flex-col gap-2">
+                        <button @click="downloadBackup" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200"><i class="ph ph-download-simple text-lg"></i> 備份資料 (下載檔案)</button>
+                        <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer"><i class="ph ph-upload-simple text-lg"></i> 還原資料 (上傳檔案)<input type="file" accept=".json" @change="restoreBackup" class="hidden"></label>
+                    </div>
+                </div>
+                <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
+            </div>
+        </div>
+
+        <transition name="slide-up">
+            <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal"></div>
+                <div class="bg-white w-full max-w-md max-h-[90vh] sm:rounded-2xl rounded-t-3xl p-6 relative flex flex-col shadow-2xl overflow-hidden h-auto mb-safe">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h2 class="text-xl font-bold text-slate-800">{{ isEditing ? '編輯行程' : '新增行程' }}</h2>
+                        <button @click="closeModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32">
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                             <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片連結 (URL)</label><div class="relative"><i class="ph ph-image absolute left-3 top-3.5 text-slate-400"></i><input v-model="form.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div><p class="text-[10px] text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，豐富你的行程卡片！</p></div>
+
+                            <div class="grid grid-cols-[1fr,60px] gap-3">
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">歌手/團體</label><input v-model="form.artist" type="text" placeholder="例如: Taylor Swift" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">應援色</label><div class="h-[46px] w-full relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><input v-model="form.color" type="color" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0"></div></div>
+                            </div>
+                            
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">心情貼紙 (Emoji)</label><input v-model="form.sticker" type="text" placeholder="輸入一個 Emoji 貼紙 (例如: ✨)" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">日期</label><input v-model="form.date" type="date" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">時間</label><input v-model="form.time" type="time" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                            </div>
+                             <div><label class="block text-sm font-medium text-slate-500 mb-1">座位 (印在票根上)</label><input v-model="form.seat" type="text" placeholder="例如: 搖滾A區 1號" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                             <div><label class="block text-sm font-medium text-slate-500 mb-1">地點</label><div class="flex gap-2"><div class="relative flex-1"><i class="ph ph-map-pin absolute left-3 top-3.5 text-slate-400"></i><input v-model="form.location" type="text" placeholder="地點" class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div><button @click="searchCoordinates" class="bg-blue-50 text-blue-600 px-3 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center shrink-0"><i class="ph ph-crosshair text-lg"></i></button></div></div>
+                             <p v-if="searchError" class="text-xs font-medium mt-2 p-2 rounded-lg" :class="searchError.includes('成功') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                                {{ searchError }}
+                            </p>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-slate-700">必帶清單 ✅</label><button @click="addDefaultChecklist" class="text-xs text-primary hover:underline" :style="{color: themeColor}">加入常用項目</button></div>
+                            <div class="space-y-2 mb-2"><div v-for="(item, index) in form.checklist" :key="index" class="flex gap-2 items-center"><input v-model="item.text" type="text" placeholder="項目" class="flex-1 bg-slate-50 border-none rounded-lg p-2 text-sm"><button @click="removeChecklistItem(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-x"></i></button></div></div>
+                            <button @click="addChecklistItem" class="w-full py-2 bg-slate-50 text-slate-500 text-xs rounded-lg border border-dashed border-slate-300 hover:bg-slate-100">+ 新增檢查項目</button>
+                        </div>
+
+                        <hr class="border-slate-100 my-2">
+                        
+                        <div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-slate-700">詳細支出記帳 💰</label><span class="text-xs font-bold" :style="{ color: themeColor }">總計: ${{ formatMoney(calculateTotal(form.expenses)) }}</span></div><div class="space-y-2 mb-2"><div v-for="(exp, index) in form.expenses" :key="index" class="grid grid-cols-[1fr,1fr,auto] gap-2 items-center"><input v-model="exp.item" type="text" placeholder="項目" class="w-full bg-slate-50 border-none rounded-lg p-2 text-sm"><input v-model.number="exp.amount" type="number" placeholder="金額" class="w-full bg-slate-50 border-none rounded-lg p-2 text-sm text-right"><button @click="removeExpenseItem(index)" class="text-slate-400 hover:text-red-500"><i class="ph ph-minus-circle text-lg"></i></button></div></div><div class="flex gap-2 overflow-x-auto"><button @click="addExpenseItem('門票')" class="px-3 py-1 bg-slate-100 text-xs rounded-full border">門票</button><button @click="addExpenseItem('交通')" class="px-3 py-1 bg-slate-100 text-xs rounded-full border">交通</button><button @click="addExpenseItem('住宿')" class="px-3 py-1 bg-slate-100 text-xs rounded-full border">住宿</button><button @click="addExpenseItem('周邊')" class="px-3 py-1 bg-slate-100 text-xs rounded-full border">周邊</button></div></div>
+                         <div><label class="block text-sm font-medium text-slate-700 mb-1">心得筆記 📝</label><textarea v-model="form.memo" placeholder="寫下你的應援心情、觀後感..." class="w-full h-24 bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/50 text-slate-800 resize-none"></textarea></div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
+                        <button @click="saveEvent" :style="{ backgroundColor: themeColor }" class="w-full text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showImportModal = false">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md m-4">
+                <h3 class="font-bold text-lg mb-2 text-slate-700">批次匯入行程</h3>
+                
+                <div class="bg-slate-50 p-3 rounded-xl mb-3 text-xs text-slate-500 leading-relaxed border border-slate-100">
+                    <p class="font-bold mb-1 text-slate-700">💡 如何使用：</p>
+                    請貼上標準的 <b>JSON 陣列</b>。務必包含**日期**、**歌手**和**活動名稱**。
+                    <ul class="list-disc list-inside mt-1 ml-1">
+                        <li>**日期**：支援 `YYYY-MM-DD` 或六位數簡寫 `YYMMDD` (如 240101)。</li>
+                        <li>**費用**：請使用 `expenses` 欄位，格式為 `[{"項目": "門票", "金額": 5000}]`。</li>
+                        <li>其他可選欄位：`地點`、`時間`、`座位`、`應援色`、`心得`。</li>
+                    </ul>
+                </div>
+
+                <textarea v-model="importJson" class="w-full h-40 bg-slate-50 border rounded-xl p-3 text-xs font-mono mb-4 leading-relaxed" placeholder='貼上 JSON 陣列，例如：
+[
+  {
+    "日期": "230422", 
+    "歌手": "Taemin", 
+    "活動名稱": "RE : ACT", 
+    "地點": "首爾蠶室", 
+    "expenses": [
+      {"項目": "門票", "金額": 5800}
+    ]
+  }
+]
+'></textarea>
+                <div class="flex gap-2"><button @click="showImportModal = false" class="flex-1 py-2 text-slate-500">取消</button><button @click="processImport" :style="{ backgroundColor: themeColor }" class="flex-1 text-white py-2 rounded-lg font-bold shadow-sm">匯入</button></div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -519,14 +602,14 @@
                 const showSettingsModal = ref(false); 
                 const showImportModal = ref(false);
                 const showTicketModal = ref(false); 
-                const showShareImageModal = ref(false); // [新增] 分享圖片 Modal
-                const shareEvent = ref(null); // [新增] 當前分享的活動數據
-                
                 const ticketEvent = ref({}); 
                 const isEditing = ref(false);
                 const importJson = ref('');
                 let map = null;
                 let markers = [];
+
+                // [移除] 追星總里程數的狀態 (totalDistance)
+                // const totalDistance = ref(localStorage.getItem('idolTotalDistance') ? Number(localStorage.getItem('idolTotalDistance')) : 0);
 
                 // 移除預設貼紙陣列，改為讓用戶自由輸入
                 const moodStickers = []; 
@@ -564,86 +647,25 @@
                     }
                     const savedTheme = localStorage.getItem('idolTheme');
                     if (savedTheme) themeColor.value = savedTheme;
+                    
+                    // [移除] 監聽 totalDistance 變化並儲存
+                    // if (localStorage.getItem('idolTotalDistance')) {
+                    //    totalDistance.value = Number(localStorage.getItem('idolTotalDistance'));
+                    // }
                 });
 
                 watch(customTitle, (newVal) => localStorage.setItem('appTitle', newVal));
                 watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
                 watch(themeColor, (newVal) => localStorage.setItem('idolTheme', newVal));
                 
+                // [移除] 監聽 totalDistance 變化並儲存
+                // watch(totalDistance, (newVal) => localStorage.setItem('idolTotalDistance', newVal.toString()));
+                
                 watch(activeTab, (newTab) => {
                     if (newTab === 'map') {
                         nextTick(() => { initMap(); });
                     }
                 });
-
-                // [新增] OpenShareImageModal 邏輯，在打開 Modal 時生成圖片
-                const openShareImageModal = (event) => {
-                    shareEvent.value = event;
-                    showShareImageModal.value = true;
-                    nextTick(() => {
-                        generateOgImage(event);
-                    });
-                }
-                
-                const generateOgImage = (event) => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const ctx = canvas.getContext('2d');
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    const color = event.color || themeColor.value;
-                    const dateDisplay = event.date || '未知日期';
-                    const titleDisplay = event.title || '未命名活動';
-
-                    // 1. 背景色 (使用主題色淺色/輕微漸變)
-                    const gradient = ctx.createLinearGradient(0, 0, width, height);
-                    gradient.addColorStop(0, adjustColor(color, 120));
-                    gradient.addColorStop(1, adjustColor(color, 180));
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, width, height);
-
-                    // 2. 藝人/標題背景
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(0, height - 100, width, 100);
-
-                    // 3. 文字樣式設置
-                    ctx.fillStyle = 'white';
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                    ctx.shadowBlur = 4;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
-                    
-                    // 4. 藝人名稱 (大字)
-                    ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
-                    ctx.fillText(event.artist || '無藝人資訊', 20, 50);
-
-                    // 5. 活動名稱
-                    ctx.font = 'bold 20px "Noto Sans TC", sans-serif';
-                    ctx.fillText(titleDisplay, 20, height - 60);
-
-                    // 6. 日期/地點
-                    ctx.font = '14px "Noto Sans TC", sans-serif';
-                    ctx.fillText(`${dateDisplay} | ${event.location || '未知地點'}`, 20, height - 35);
-                    
-                    // 7. Logo/Sticker
-                    ctx.font = '30px Arial';
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = color;
-                    ctx.fillText(event.sticker || '✨', width - 50, 50);
-                };
-
-                const downloadShareImage = () => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const link = document.createElement('a');
-                    link.download = `IdolTracker_${shareEvent.value.artist}_${shareEvent.value.date}.png`;
-                    // 將 Canvas 內容轉為 Data URL
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                };
-
 
                 const adjustColor = (color, amount) => {
                     let hex = color.replace('#', '');
@@ -721,6 +743,8 @@
                 });
 
                 const statsData = computed(() => {
+                    // [移除] 地球周長常數
+                    // const EARTH_CIRCUMFERENCE_KM = 40075;
                     
                     let targetEvents = events.value;
                     if (selectedYear.value !== 'ALL') {
@@ -758,6 +782,9 @@
                     });
                     const series = Object.keys(titleMap).map(key => ({ title: key, count: titleMap[key] })).filter(item => item.count > 1).sort((a, b) => b.count - a.count);
 
+                    // 4. [移除] 地球圈數計算
+                    // const rounds = totalDistance.value > 0 ? (totalDistance.value / EARTH_CIRCUMFERENCE_KM).toFixed(2) : '0';
+
                     return { 
                         count, 
                         totalSpent, 
@@ -765,6 +792,7 @@
                         maxArtistCount, 
                         series,
                         topLocations: sortedLocations, // 新增
+                        // [移除] earthRounds: rounds 
                     };
                 });
 
@@ -1001,15 +1029,37 @@
                     showTicketModal.value = true;
                 }
 
-                // [新增] 下載分享圖片邏輯
-                const downloadShareImage = () => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
+                const downloadBackup = () => {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(events.value));
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+                    downloadAnchorNode.setAttribute("download", "idol_tracker_backup_" + new Date().toISOString().split('T')[0] + ".json");
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+                };
 
-                    const link = document.createElement('a');
-                    link.download = `IdolTracker_${shareEvent.value.artist}_${shareEvent.value.date}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
+                const restoreBackup = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const parsed = JSON.parse(e.target.result);
+                            if (Array.isArray(parsed)) {
+                                if(confirm('確定要還原備份嗎？')) {
+                                    events.value = parsed;
+                                    alert('還原成功！');
+                                    showSettingsModal.value = false;
+                                }
+                            } else {
+                                alert('檔案格式錯誤');
+                            }
+                        } catch (err) {
+                            alert('無法讀取檔案，請確認是否為有效的備份檔');
+                        }
+                    };
+                    reader.readAsText(file);
                 };
 
                 const processImport = () => {
@@ -1067,77 +1117,16 @@
                 
                 // [修正] Google Maps 搜尋連結
                 const getMapLink = (l) => l ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#';
-                
-                // [新增] Canvas 繪圖邏輯
-                const generateOgImage = (event) => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const ctx = canvas.getContext('2d');
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    const color = event.color || themeColor.value;
-                    const dateDisplay = event.date || '未知日期';
-                    const titleDisplay = event.title || '未命名活動';
-
-                    // 0. 清除並設定背景
-                    ctx.clearRect(0, 0, width, height);
-                    const gradient = ctx.createLinearGradient(0, 0, width, height);
-                    gradient.addColorStop(0, adjustColor(color, 120));
-                    gradient.addColorStop(1, adjustColor(color, 180));
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, width, height);
-                    
-                    // 1. 藝人/標題背景
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(0, height - 120, width, 120);
-
-                    // 2. 陰影和文字顏色
-                    ctx.fillStyle = 'white';
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                    ctx.shadowBlur = 4;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
-                    
-                    // 3. 藝人名稱 (大字)
-                    ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
-                    ctx.fillText(event.artist || '無藝人資訊', 20, 50);
-
-                    // 4. 活動名稱 (底部)
-                    ctx.font = 'bold 22px "Noto Sans TC", sans-serif';
-                    ctx.fillText(titleDisplay, 20, height - 70);
-
-                    // 5. 日期/地點 (底部)
-                    ctx.font = '16px "Noto Sans TC", sans-serif';
-                    ctx.fillText(`${dateDisplay} | ${event.location || '未知地點'}`, 20, height - 40);
-                    
-                    // 6. Logo/Sticker (右上方)
-                    ctx.font = '40px Arial';
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = color;
-                    ctx.fillText(event.sticker || '🌟', width - 60, 60);
-                };
-                
-                // [新增] OpenShareImageModal 邏輯，在打開 Modal 時生成圖片
-                const openShareImageModal = (event) => {
-                    shareEvent.value = event;
-                    showShareImageModal.value = true;
-                    nextTick(() => {
-                        generateOgImage(event);
-                    });
-                }
-
 
                 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
-                    showModal, showSettingsModal, showImportModal, showTicketModal, showShareImageModal, shareEvent, isEditing, form, importJson, searchQuery,
+                    showModal, showSettingsModal, showImportModal, showTicketModal, ticketEvent, isEditing, form, importJson, searchQuery,
                     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, moodStickers,
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleThemeModal, toggleSettingsModal, setTheme, updateCustomTheme, processImport, 
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
-                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle,
-                    openShareImageModal, downloadShareImage // 導出新增的分享功能
+                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle
                 };
             }
         }).mount('#app');
