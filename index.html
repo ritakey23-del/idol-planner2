@@ -262,7 +262,7 @@
                                     {{ event.seat }}
                                 </div>
                                 
-                                <div class="flex items-center gap-2 truncate pr-2">
+                                <div class="flex items-center gap-2 truncate pr-1">
                                     <i class="ph ph-map-pin shrink-0" :style="{ color: getEventColor(event) }"></i>
                                     <span class="truncate">{{ event.location }}</span>
                                 </div>
@@ -1027,7 +1027,7 @@ const a = document.createElement('a');
                     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
                 };
 
-               // Calendar
+
 const addToCalendar = (event) => {
     const { title, date, time, location, artist, memo } = event;
     // 將日期和時間格式轉換為 Google 日曆所需的 YYYYMMDDTHHMMSSZ (UTC) 格式
