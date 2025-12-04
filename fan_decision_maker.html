@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追星決策轉盤</title>
+    <style>
+        /* CSS 樣式區域 */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            padding: 20px;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #d9004c; /* 追星熱情色 */
+            margin-bottom: 25px;
+        }
+
+        /* ------------------ 輸入區 ------------------ */
+        textarea {
+            width: 95%;
+            height: 150px;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 1rem;
+        }
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        /* ------------------ 按鈕 ------------------ */
+        #decide-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background-color: #1a73e8;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            box-shadow: 0 4px #0f58b7;
+        }
+        #decide-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px #0f58b7;
+        }
+        #decide-btn:disabled {
+            background-color: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* ------------------ 結果區 ------------------ */
+        #result-box {
+            margin-top: 35px;
+            padding: 30px 15px;
+            min-height: 80px;
+            border: 3px dashed #ccc;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s;
+        }
+        
+        /* 動畫效果：模擬轉盤正在「旋轉」 */
+        .spinning {
+            border-style: solid;
+            border-color: #d9004c;
+            animation: pulse-spin 0.2s infinite alternate;
+            color: transparent !important;
+        }
+        
+        /* 動畫效果：結果揭曉 */
+        .revealed {
+            background-color: #d9004c;
+            color: white !important;
+            border: 3px solid #d9004c;
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(217, 0, 76, 0.4);
+        }
+
+        @keyframes pulse-spin {
+            0% { transform: scale(1); border-width: 3px; }
+            100% { transform: scale(1.02); border-width: 5px; }
+        }
+        
+        /* 儲存提示 */
+        #save-status {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: green;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ 追星決策轉盤 ✨</h1>
+
+        <div class="input-group">
+            <label for="options-input">請輸入你的所有選項 (每行一個選項)：</label>
+            <textarea id="options-input" placeholder="例如：
+今天要穿應援服
+今天要穿私服
+今天要穿專輯概念T恤
+(請刪除範例，輸入你的選項)">今天要穿應援服
+今天要穿私服
+今天要穿專輯概念T恤</textarea>
+            <div id="save-status">列表已自動儲存。</div>
+        </div>
+        
+        <button id="decide-btn">開始決策！</button>
+
+        <div id="result-box">
+            點擊上方按鈕開始你的追星決策！
+        </div>
+
+    </div>
+
+    <script>
+        // --- JavaScript 邏輯區域 ---
+
+        const optionsInput = document.getElementById('options-input');
+        const decideBtn = document.getElementById('decide-btn');
+        const resultBox = document.getElementById('result-box');
+        const saveStatus = document.getElementById('save-status');
+        const STORAGE_KEY = 'fanDecisionOptions';
+        const SPIN_DURATION = 2000; // 轉盤持續時間 2000ms (2秒)
+
+        // 1. 資料持久化：從 LocalStorage 載入資料
+        function loadOptions() {
+            const savedOptions = localStorage.getItem(STORAGE_KEY);
+            if (savedOptions) {
+                optionsInput.value = savedOptions;
+            }
+        }
+        
+        // 2. 資料持久化：儲存資料到 LocalStorage
+        function saveOptions() {
+            localStorage.setItem(STORAGE_KEY, optionsInput.value);
+            // 提供視覺回饋
+            saveStatus.textContent = '列表已自動儲存。';
+            saveStatus.style.opacity = 1;
+            setTimeout(() => {
+                saveStatus.style.opacity = 0;
+            }, 1500);
+        }
+        
+        // 3. 獲取並清理選項列表
+        function getOptions() {
+            // 分割 textarea 內容，去除空白行，並去除前後空白
+            return optionsInput.value
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+        }
+
+        // 4. 決策邏輯
+        function makeDecision() {
+            const options = getOptions();
+            if (options.length === 0) {
+                alert("請至少輸入一個選項！");
+                return;
+            }
+            
+            // 鎖定按鈕，開始動畫
+            decideBtn.disabled = true;
+            resultBox.classList.remove('revealed');
+            resultBox.classList.add('spinning');
+            resultBox.textContent = '思考中...';
+
+            // 隨機選擇一個選項
+            const randomIndex = Math.floor(Math.random() * options.length);
+            const finalChoice = options[randomIndex];
+
+            // 模擬轉盤時間
+            setTimeout(() => {
+                // 停止動畫，揭曉結果
+                resultBox.classList.remove('spinning');
+                resultBox.classList.add('revealed');
+                resultBox.textContent = finalChoice;
+                decideBtn.disabled = false;
+            }, SPIN_DURATION);
+        }
+
+        // 5. 事件綁定
+        decideBtn.addEventListener('click', makeDecision);
+        
+        // 任何輸入時自動儲存 (使用 debounce 更佳，但為求簡單使用 input)
+        optionsInput.addEventListener('input', saveOptions);
+        
+        // 初始化
+        loadOptions();
+        
+    </script>
+</body>
+</html>
