@@ -262,7 +262,7 @@
                                     {{ event.seat }}
                                 </div>
                                 
-                                <div class="flex items-center gap-2 truncate pr-1">
+                                <div class="flex items-center gap-2 truncate pr-2">
                                     <i class="ph ph-map-pin shrink-0" :style="{ color: getEventColor(event) }"></i>
                                     <span class="truncate">{{ event.location }}</span>
                                 </div>
@@ -1014,20 +1014,8 @@
                     });
                     if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
                 };
-// Calendar
-                const addToIosCalendar = (event) => { // <-- 重新命名為 addToIosCalendar
-                    const { title, date, time, location, artist } = event;
-const startDateTime = new Date(`${date}T${time}`).toISOString().replace(/-|:|\.\d+/g, "");
-                    const endDateTime = new Date(new Date(`${date}T${time}`).getTime() + 3*60*60*1000).toISOString().replace(/-|:|\.\d+/g, "");
-const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title} - ${artist}\nDTSTART:${startDateTime}\nDTEND:${endDateTime}\nLOCATION:${location}\nDESCRIPTION:追星日記行程\nEND:VEVENT\nEND:VCALENDAR`;
-                    const blob = new Blob([icsContent], { type: 'text/calendar' });
-                    const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-                    a.href = url; a.download = `${title}.ics`;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-                };
 
-
+               // Calendar
 const addToCalendar = (event) => {
     const { title, date, time, location, artist, memo } = event;
     // 將日期和時間格式轉換為 Google 日曆所需的 YYYYMMDDTHHMMSSZ (UTC) 格式
@@ -1161,7 +1149,7 @@ const addToCalendar = (event) => {
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
-                    downloadBackup, restoreBackup, idolNagging, addToCalendar, addToIosCalendar, showTicket, getTicketPrice, updateAppTitle
+                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle
                 };
             }
         }).mount('#app');
