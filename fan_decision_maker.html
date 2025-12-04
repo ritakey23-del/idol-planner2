@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>追星決策轉盤 (最終版)</title>
+    <title>追星決策轉盤 (中心按鈕版)</title>
     <style>
         /* CSS 樣式區域 (略，同前版) */
         body {
@@ -34,6 +34,8 @@
             display: block;
             background-color: #eee;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            /* 關鍵：設定游標為指標，暗示可點擊 */
+            cursor: pointer; 
             touch-action: manipulation;
         }
         
@@ -50,7 +52,6 @@
             transition: all 0.5s;
         }
         
-        /* 結果揭曉時樣式：文字為黑色 (修正後的設定) */
         .highlight-result {
             background-color: #d9004c;
             color: #000000 !important; 
@@ -59,17 +60,7 @@
             box-shadow: 0 8px 20px rgba(217, 0, 76, 0.4);
         }
         
-        #spin-btn {
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: white;
-            background-color: #1a73e8;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px #0f58b7;
-        }
+        /* 外部按鈕已移除 */
 
         textarea {
             width: 95%;
@@ -85,15 +76,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎡 追星決策轉盤 (最終版) 🎡</h1>
+        <h1>🎡 追星決策轉盤 (中心按鈕版) 🎡</h1>
 
         <canvas id="wheelCanvas" width="300" height="300"></canvas>
 
         <div id="result-display">
-            點擊「開始轉動」，讓命運為你決定！
+            點擊轉盤中心圓形，開始你的決策！
         </div>
-
-        <button id="spin-btn">開始轉動！</button>
 
         <div class="input-group">
             <label for="options-input">請輸入你的所有選項 (每行一個選項)：</label>
@@ -112,11 +101,10 @@
         </div>
     </div>
 
-    <script>
+   <script>
         // --- JavaScript 邏輯區域 ---
 
         const optionsInput = document.getElementById('options-input');
-        const spinBtn = document.getElementById('spin-btn');
         const resultDisplay = document.getElementById('result-display');
         const saveStatus = document.getElementById('save-status');
         const wheelCanvas = document.getElementById('wheelCanvas');
@@ -133,6 +121,27 @@
         let currentRotation = 0;
         let isSpinning = false;
         let options = [];
+
+        // --- Helper: 文字換行邏輯 (略，同前版) ---
+        function wrapText(ctx, text, maxWidth) {
+            const words = text.split('');
+            let line = '';
+            let lines = [];
+            for (let n = 0; n < words.length; n++) {
+                const word = words[n];
+                const testLine = line + word;
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > maxWidth && line.length > 0) {
+                    lines.push(line);
+                    line = word;
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line);
+            return lines;
+        }
 
         // --- 1. 資料持久化 (略，同前版) ---
         function loadOptions() {
@@ -165,7 +174,7 @@
                 .filter(line => line.length > 0);
         }
 
-        // --- 2. 繪製轉盤 (核心修正區) ---
+        // --- 2. 繪製轉盤 (略，同前版) ---
         function drawWheel() {
             ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
 
@@ -194,7 +203,7 @@
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // 繪製文字 (修正: 統一使用黑色文字)
+                // 繪製文字 
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(startAngle + arcAngle / 2); 
@@ -202,22 +211,31 @@
                 ctx.textAlign = 'center'; 
                 ctx.textBaseline = 'middle';
                 
-                // 修正點：統一使用黑色文字，提高對比度
                 const textColor = '#000000'; 
                 ctx.fillStyle = textColor;
                 ctx.font = 'bold 16px Arial'; 
                 
-                const displayText = options[i].length > 8 ? options[i].substring(0, 8) + '...' : options[i];
-                ctx.fillText(displayText, radius * 0.6, 0); 
+                const maxWidth = radius * 0.7; 
+                const lineHeight = 18; 
+                const lines = wrapText(ctx, options[i], maxWidth);
+                
+                const totalTextHeight = lines.length * lineHeight;
+                let textY = -totalTextHeight / 2 + lineHeight / 2;
+                const textX = radius * 0.55; 
+                
+                for(let j = 0; j < lines.length; j++) {
+                    ctx.fillText(lines[j], textX, textY);
+                    textY += lineHeight;
+                }
+                
                 ctx.restore();
             }
         }
         
-        // --- 3. 繪製中心指標 (固定，不旋轉) ---
+        // --- 3. 繪製中心指標 (略，同前版) ---
         function drawPointer() {
             ctx.save();
             
-            // 1. 繪製指針線 (從中心指向 12 點鐘方向)
             ctx.beginPath();
             ctx.strokeStyle = '#D9004C';
             ctx.lineWidth = 3;
@@ -225,19 +243,41 @@
             ctx.lineTo(centerX, centerY - radius); 
             ctx.stroke();
 
-            // 2. 繪製中心圓 (強調指示點)
+            const centerRadius = radius * 0.15;
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radius * 0.15, 0, 2 * Math.PI);
-            ctx.fillStyle = '#D9004C';
+            ctx.arc(centerX, centerY, centerRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = isSpinning ? '#CCCCCC' : '#D9004C'; 
             ctx.fill();
             ctx.strokeStyle = '#fff';
             ctx.stroke();
             
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(isSpinning ? 'GO!' : 'SPIN', centerX, centerY);
+            
             ctx.restore();
         }
 
+        // --- 4. 點擊偵測邏輯 (略，同前版) ---
+        function isClickInsideCenter(clickX, clickY) {
+            const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
+            const centerRadius = radius * 0.15;
+            return distance < centerRadius;
+        }
 
-        // --- 4. 轉盤動畫邏輯 (略，同前版) ---
+        function handleCanvasClick(event) {
+            const rect = wheelCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left; 
+            const y = event.clientY - rect.top;
+
+            if (isClickInsideCenter(x, y) && !isSpinning && options.length > 0) {
+                spinWheel();
+            }
+        }
+
+        // --- 5. 轉盤動畫邏輯 (核心修正區) ---
         function spinWheel() {
             options = getCleanedOptions();
             if (options.length === 0) {
@@ -247,24 +287,29 @@
             if (isSpinning) return;
 
             isSpinning = true;
-            spinBtn.disabled = true;
             resultDisplay.classList.remove('highlight-result');
             resultDisplay.classList.remove('spinning');
             resultDisplay.textContent = '轉動中...';
 
             const totalSpins = 5 + Math.random() * 2;
-            const targetIndex = Math.floor(Math.random() * options.length);
+            const targetIndex = Math.floor(Math.random() * options.length); // 這是最終要顯示的獲勝 Index
             
             const arcAngle = (2 * Math.PI) / options.length; 
-            const targetAngleOffset = targetIndex * arcAngle + arcAngle / 2;
             
-            const topPositionAngle = 3 * Math.PI / 2; 
-
+            // 視覺校準修正點：我們計算旋轉角度時，使用 targetIndex 前一個 segment 的中心點
+            // 這樣在停止時，可以將目標 segment (targetIndex) 推入箭頭中心
+            const angleIndex = (targetIndex - 1 + options.length) % options.length; 
+            const targetAngleOffset = angleIndex * arcAngle + arcAngle / 2;
+            
+            const topPositionAngle = 3 * Math.PI / 2; // 箭頭在 270度
+            
+            // 計算將前一個 segment 中心點轉到 270度需要的角度
             let rotationToTarget = (topPositionAngle - targetAngleOffset) % (2 * Math.PI);
             if (rotationToTarget < 0) {
                 rotationToTarget += 2 * Math.PI;
             }
             
+            // 總旋轉角度 = 至少轉 N 圈 + 停在目標位置的精確角度
             const finalRotation = (totalSpins * 2 * Math.PI) + rotationToTarget; 
             
             let startTime = null;
@@ -279,10 +324,9 @@
                 
                 currentRotation = easedProgress * finalRotation;
 
-                // 繪製順序：清空 -> 旋轉畫布 -> 繪製轉盤 -> 恢復畫布 -> 繪製指標
                 ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
                 
-                // 1. 繪製旋轉的轉盤
+                // 旋轉
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(currentRotation);
@@ -290,7 +334,7 @@
                 drawWheel();
                 ctx.restore(); 
 
-                // 2. 繪製不旋轉的指標 (固定在中心)
+                // 固定繪製
                 drawPointer();
                 
                 if (progress < 1) {
@@ -298,22 +342,19 @@
                 } else {
                     // 動畫結束
                     isSpinning = false;
-                    spinBtn.disabled = false;
                     resultDisplay.classList.add('highlight-result');
                     resultDisplay.textContent = `恭喜你！結果是：「${options[targetIndex]}」`;
+                    drawPointer(); // 最終顯示狀態
                 }
             }
             resultDisplay.classList.add('spinning');
             requestAnimationFrame(animateSpin);
         }
 
-        // --- 5. 事件綁定 ---
-        spinBtn.addEventListener('click', spinWheel);
+        // --- 6. 事件綁定與初始化 ---
+        wheelCanvas.addEventListener('click', handleCanvasClick);
         optionsInput.addEventListener('input', saveOptions);
         
-        // --- 6. 初始化 ---
         loadOptions();
         
     </script>
-</body>
-</html>
