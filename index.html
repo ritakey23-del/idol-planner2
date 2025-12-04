@@ -267,18 +267,13 @@
                                     <span class="truncate">{{ event.location }}</span>
                                 </div>
 
-                                        <div class="flex items-center gap-2 pt-1">
-            <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                <i class="ph ph-google-logo text-sm"></i> Google 日曆
-            </button>
-            <button @click.stop="addToIosCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                <i class="ph ph-calendar-plus text-sm"></i> iOS 日曆
-            </button>
-            <a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                <i class="ph ph-navigation-arrow text-sm"></i> 導航
-            </a>
-        </div>
-
+                                <div class="flex items-center gap-2 pt-1">
+                                    <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                                        <i class="ph ph-calendar-plus text-sm"></i> 加入日曆
+                                    </button>
+                                    <a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                                        <i class="ph ph-navigation-arrow text-sm"></i> 導航
+                                    </a>
                                 </div>
                                 
                                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-slate-100">
@@ -1015,36 +1010,18 @@
                     if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
                 };
 
-               // Calendar
-const addToCalendar = (event) => {
-    const { title, date, time, location, artist, memo } = event;
-    // 將日期和時間格式轉換為 Google 日曆所需的 YYYYMMDDTHHMMSSZ (UTC) 格式
-    // 假設行程時間為當地時間，並將其轉換為 ISO 格式以確保準確性
-    // 預設活動時長為 3 小時 (3 * 60 * 60 * 1000 毫秒)
-
-    const startTime = new Date(`${date}T${time}`);
-    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000);
-
-    // Google 日曆使用基本 ISO 格式 (YYYYMMDDTHHMMSS)
-    // 移除毫秒和時區標識 Z (讓 Google 根據用戶時區處理)
-    const formatDateTime = (dateObj) => dateObj.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, '');
-
-    const startDateTimeFormatted = formatDateTime(startTime);
-    const endDateTimeFormatted = formatDateTime(endTime);
-    
-    // 建立 Google 日曆連結
-    const googleCalendarUrl = 'https://www.google.com/calendar/render?action=TEMPLATE' +
-        '&text=' + encodeURIComponent(`${title} - ${artist} 🌟`) +
-        '&dates=' + startDateTimeFormatted + '/' + endDateTimeFormatted +
-        '&details=' + encodeURIComponent(`行程詳細資訊：\n\n${memo || '無筆記'}\n\n來自我的追星日記 App`) +
-        '&location=' + encodeURIComponent(location) +
-        '&sf=true' + // 在同一頁面打開連結
-        '&output=xml'; // 確保正確的輸出格式
-
-    // 在新視窗/標籤頁開啟連結
-    window.open(googleCalendarUrl, '_blank');
-};
-
+                // Calendar
+                const addToCalendar = (event) => {
+                    const { title, date, time, location, artist } = event;
+                    const startDateTime = new Date(`${date}T${time}`).toISOString().replace(/-|:|\.\d+/g, "");
+                    const endDateTime = new Date(new Date(`${date}T${time}`).getTime() + 3*60*60*1000).toISOString().replace(/-|:|\.\d+/g, "");
+                    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title} - ${artist}\nDTSTART:${startDateTime}\nDTEND:${endDateTime}\nLOCATION:${location}\nDESCRIPTION:追星日記行程\nEND:VEVENT\nEND:VCALENDAR`;
+                    const blob = new Blob([icsContent], { type: 'text/calendar' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `${title}.ics`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                };
 
                 // Ticket Logic
                 const showTicket = (evt) => {
