@@ -1,107 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>追星決策轉盤 (中心按鈕版)</title>
-    <style>
-        /* CSS 樣式區域 (略，同前版) */
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            padding: 20px;
-            margin: 0;
-            text-align: center;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            color: #d9004c;
-            margin-bottom: 25px;
-        }
-
-        #wheelCanvas {
-            border: 3px solid #ccc;
-            border-radius: 50%;
-            margin: 20px auto;
-            display: block;
-            background-color: #eee;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-            /* 關鍵：設定游標為指標，暗示可點擊 */
-            cursor: pointer; 
-            touch-action: manipulation;
-        }
-        
-        #result-display {
-            margin-top: 25px;
-            padding: 30px 15px;
-            min-height: 40px;
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #444; 
-            background-color: #f9f9f9;
-            transition: all 0.5s;
-        }
-        
-        .highlight-result {
-            background-color: #d9004c;
-            color: #000000 !important; 
-            border: 3px solid #d9004c;
-            transform: scale(1.05);
-            box-shadow: 0 8px 20px rgba(217, 0, 76, 0.4);
-        }
-        
-        /* 外部按鈕已移除 */
-
-        textarea {
-            width: 95%;
-            height: 100px;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            resize: vertical;
-            font-size: 1rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎡 追星決策轉盤 (中心按鈕版) 🎡</h1>
-
-        <canvas id="wheelCanvas" width="300" height="300"></canvas>
-
-        <div id="result-display">
-            點擊轉盤中心圓形，開始你的決策！
-        </div>
-
-        <div class="input-group">
-            <label for="options-input">請輸入你的所有選項 (每行一個選項)：</label>
-            <textarea id="options-input" placeholder="例如：
-今天看舊 MV
-今天看新 MV
-今天看舞台直拍
-今天看綜藝節目
-今天去追星景點
-(請刪除範例，輸入你的選項)">今天看舊 MV
-今天看新 MV
-今天看舞台直拍
-今天看綜藝節目
-今天去追星景點</textarea>
-            <div id="save-status">列表已自動儲存。</div>
-        </div>
-    </div>
-
-   <script>
+<script>
         // --- JavaScript 邏輯區域 ---
 
         const optionsInput = document.getElementById('options-input');
@@ -193,7 +90,6 @@
                 const endAngle = (i + 1) * arcAngle;
                 const segmentColor = colors[i % colors.length];
 
-                // 繪製扇形
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 ctx.lineTo(centerX, centerY);
@@ -277,7 +173,7 @@
             }
         }
 
-        // --- 5. 轉盤動畫邏輯 (核心修正區) ---
+        // --- 5. 轉盤動畫邏輯 (核心修正區: 增加 180度反轉校準) ---
         function spinWheel() {
             options = getCleanedOptions();
             if (options.length === 0) {
@@ -292,25 +188,24 @@
             resultDisplay.textContent = '轉動中...';
 
             const totalSpins = 5 + Math.random() * 2;
-            const targetIndex = Math.floor(Math.random() * options.length); // 這是最終要顯示的獲勝 Index
+            const targetIndex = Math.floor(Math.random() * options.length); // 最終要顯示的獲勝 Index
             
             const arcAngle = (2 * Math.PI) / options.length; 
-            
-            // 視覺校準修正點：我們計算旋轉角度時，使用 targetIndex 前一個 segment 的中心點
-            // 這樣在停止時，可以將目標 segment (targetIndex) 推入箭頭中心
-            const angleIndex = (targetIndex - 1 + options.length) % options.length; 
-            const targetAngleOffset = angleIndex * arcAngle + arcAngle / 2;
+            const targetAngleOffset = targetIndex * arcAngle + arcAngle / 2; // 目標 segment 的中心角度
             
             const topPositionAngle = 3 * Math.PI / 2; // 箭頭在 270度
-            
-            // 計算將前一個 segment 中心點轉到 270度需要的角度
+
+            // 1. 計算將目標 segment 轉到 270度需要的角度
             let rotationToTarget = (topPositionAngle - targetAngleOffset) % (2 * Math.PI);
             if (rotationToTarget < 0) {
                 rotationToTarget += 2 * Math.PI;
             }
             
-            // 總旋轉角度 = 至少轉 N 圈 + 停在目標位置的精確角度
-            const finalRotation = (totalSpins * 2 * Math.PI) + rotationToTarget; 
+            // 2. 增加 180度 (Math.PI) 修正，以翻轉視覺結果
+            const VISUAL_FLIP = Math.PI; 
+            
+            // 總旋轉角度 = 至少轉 N 圈 + 停在目標位置的精確角度 + 180度反轉
+            const finalRotation = (totalSpins * 2 * Math.PI) + rotationToTarget + VISUAL_FLIP; 
             
             let startTime = null;
             const duration = 4000;
@@ -326,7 +221,6 @@
 
                 ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
                 
-                // 旋轉
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(currentRotation);
@@ -334,7 +228,6 @@
                 drawWheel();
                 ctx.restore(); 
 
-                // 固定繪製
                 drawPointer();
                 
                 if (progress < 1) {
