@@ -1188,20 +1188,28 @@
  if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
                 };
  
-// NEW: Google Calendar Link Generator
+// Google Calendar Link Generator (FIXED: Timezone issue removed 'Z')
 const getGoogleCalendarLink = (event) => {
     const { title, date, time, location, artist } = event;
-    const start = new Date(`${date}T${time}`);
+    
+    // 構造 ISO 8601 格式的本地時間字串
+    const startDateTimeString = `${date}T${time}:00`; // 確保秒數存在
+    const start = new Date(startDateTimeString);
     const end = new Date(start.getTime() + 3 * 60 * 60 * 1000); // 預設活動持續 3 小時
 
     const formatDateForGoogle = (d) => {
-        // Google 日曆的時間格式: YYYYMMDDTHHmmssZ (UTC)
-        // 使用 toISOString() 產生 UTC 時間，並移除分隔符號
-        return d.toISOString().replace(/-|:|\.\d+/g, "").slice(0, 15) + 'Z';
+        // Google 日曆的時間格式: YYYYMMDDTHHmmss 
+        // 使用本地時間並格式化，不附加 'Z' (UTC) 避免時區錯誤
+        return d.toISOString().slice(0, 19).replace(/-/g, "").replace(/:/g, "").replace('T', '');
     };
 
-    const startTime = formatDateForGoogle(start);
-    const endTime = formatDateForGoogle(end);
+    // 格式化為 YYYYMMDDTHHMMSS
+    const startTime = `${date.replace(/-/g, '')}T${time.replace(':', '')}00`;
+    
+    // 預設結束時間為開始時間 + 3 小時 (需要重新計算結束時間的格式)
+    const endHour = String(end.getHours()).padStart(2, '0');
+    const endMinute = String(end.getMinutes()).padStart(2, '0');
+    const endTime = `${date.replace(/-/g, '')}T${endHour}${endMinute}00`;
     
     // Google 日曆建立事件的 URL 格式 (使用 render action=TEMPLATE)
     const url = new URL('https://calendar.google.com/calendar/render');
@@ -1325,9 +1333,9 @@ const getGoogleCalendarLink = (event) => {
                 const getDay = (d) => new Date(d).getDate();
  const getMonth = (d) => ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][new Date(d).getMonth()];
  const getDaysDiff = (d) => Math.ceil((new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0))/(1000*60*60*24));
- // [修正] Google Maps 搜尋連結
+ // [FIXED] Google Maps 搜尋連結
                 const getMapLink = (l) => l ?
- `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#';
+ `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(l)}` : '#';
 
                 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
