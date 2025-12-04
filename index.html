@@ -109,35 +109,17 @@
             cursor: pointer;
         }
 
-        /* ------------------------------------------- */
-        /* [最終修正] 票根文字混亂問題的強力覆蓋樣式 */
-        /* ------------------------------------------- */
-        .ticket-stub, .ticket-stub * {
-            /* 清除所有轉換和定位，讓元素回到正常流 */
+        /* [修正] 覆蓋樣式以修復票根文字混亂問題 */
+        .ticket-stub * {
             transform: none !important;
-            position: static !important;
+            position: relative !important;
             left: auto !important;
             top: auto !important;
-            /* 清除可能導致錯位的 CSS 過渡 */
-            transition: none !important;
-            animation: none !important;
-            /* 確保元素在自身範圍內正常顯示 */
-            overflow: visible !important; 
         }
-        
-        /* 重新設定票根的圓角缺口定位基準 */
-        .ticket-stub {
-            position: relative !important;
-        }
-
-        /* 重新設定票根內少數需要絕對定位的元素 (如貼紙) */
+        /* 僅保留貼紙的 Transform 效果 (右上方旋轉) */
         .ticket-stub .text-4xl {
-            /* 讓貼紙可以自由定位 */
-            position: absolute !important;
-            top: 16px !important;
-            right: 4px !important;
-            /* 保持貼紙的旋轉效果 */
             transform: rotate(12deg) !important;
+            position: absolute !important;
         }
     </style>
 </head>
@@ -322,8 +304,7 @@
                                     </div>
                                     
                                     <div class="flex gap-3 items-center">
-                                        <button @click.stop="openShareImageModal(event)" class="text-slate-400 hover:text-primary"><i class="ph ph-share-fat text-lg"></i></button>
-
+                                        
                                         <div class="flex gap-2">
                                             <button @click.stop="editEvent(event)" class="text-slate-400 hover:text-blue-500"><i class="ph ph-pencil-simple text-lg"></i></button>
                                             <button @click.stop="deleteEvent(event.id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
@@ -466,28 +447,6 @@
         </nav>
 
         <transition name="fade">
-            <div v-if="showShareImageModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="showShareImageModal = false">
-                <div class="w-full max-w-sm transform transition-all relative" @click.stop>
-                    <div class="bg-white rounded-2xl shadow-2xl p-5 text-center">
-                        <h3 class="font-bold text-lg mb-4 text-slate-700">生成分享圖片 ✨</h3>
-                        <canvas id="shareCanvas" width="400" height="300" class="w-full rounded-xl shadow-lg border border-slate-100 mb-4 mx-auto"></canvas>
-                        
-                        <p class="text-xs text-slate-500 mb-3">右鍵/長按圖片可選擇儲存或複製。</p>
-
-                        <div class="flex gap-3">
-                            <button @click="downloadShareImage" :style="{ backgroundColor: themeColor }" class="flex-1 text-white py-3 rounded-lg font-bold shadow-md hover:opacity-90 transition-opacity">
-                                <i class="ph ph-download-simple"></i> 下載圖片
-                            </button>
-                            <button @click="showShareImageModal = false" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-lg font-bold shadow-md hover:bg-slate-300 transition-colors">
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="fade">
             <div v-if="showTicketModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="showTicketModal = false">
                 <div class="w-full max-w-xs transform transition-all relative" @click.stop>
                     <div class="ticket-stub bg-white rounded-3xl overflow-hidden relative text-slate-800">
@@ -550,8 +509,9 @@
                 const showSettingsModal = ref(false); 
                 const showImportModal = ref(false);
                 const showTicketModal = ref(false); 
-                const showShareImageModal = ref(false); // [新增] 分享圖片 Modal 狀態
-                const shareEvent = ref(null); // [新增] 當前分享的活動數據
+                // 移除分享圖相關狀態
+                // const showShareImageModal = ref(false); 
+                // const shareEvent = ref(null); 
                 
                 const ticketEvent = ref({}); 
                 const isEditing = ref(false);
@@ -606,75 +566,6 @@
                         nextTick(() => { initMap(); });
                     }
                 });
-
-                // [新增] OpenShareImageModal 邏輯，在打開 Modal 時生成圖片
-                const openShareImageModal = (event) => {
-                    shareEvent.value = event;
-                    showShareImageModal.value = true;
-                    nextTick(() => {
-                        generateOgImage(event);
-                    });
-                }
-                
-                const generateOgImage = (event) => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const ctx = canvas.getContext('2d');
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    const color = event.color || themeColor.value;
-                    const dateDisplay = event.date || '未知日期';
-                    const titleDisplay = event.title || '未命名活動';
-
-                    // 0. 清除並設定背景
-                    ctx.clearRect(0, 0, width, height);
-                    const gradient = ctx.createLinearGradient(0, 0, width, height);
-                    gradient.addColorStop(0, adjustColor(color, 120));
-                    gradient.addColorStop(1, adjustColor(color, 180));
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, width, height);
-                    
-                    // 1. 藝人/標題背景
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(0, height - 120, width, 120);
-
-                    // 2. 陰影和文字顏色
-                    ctx.fillStyle = 'white';
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                    ctx.shadowBlur = 4;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
-                    
-                    // 3. 藝人名稱 (大字)
-                    ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
-                    ctx.fillText(event.artist || '無藝人資訊', 20, 50);
-
-                    // 4. 活動名稱 (底部)
-                    ctx.font = 'bold 22px "Noto Sans TC", sans-serif';
-                    ctx.fillText(titleDisplay, 20, height - 70);
-
-                    // 5. 日期/地點 (底部)
-                    ctx.font = '16px "Noto Sans TC", sans-serif';
-                    ctx.fillText(`${dateDisplay} | ${event.location || '未知地點'}`, 20, height - 40);
-                    
-                    // 6. Logo/Sticker (右上方)
-                    ctx.font = '40px Arial';
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = color;
-                    ctx.fillText(event.sticker || '🌟', width - 60, 60);
-                };
-
-                const downloadShareImage = () => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const link = document.createElement('a');
-                    link.download = `IdolTracker_${shareEvent.value.artist}_${shareEvent.value.date}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                };
-
 
                 const adjustColor = (color, amount) => {
                     let hex = color.replace('#', '');
@@ -1032,74 +923,6 @@
                     showTicketModal.value = true;
                 }
 
-                // [新增] OpenShareImageModal 邏輯，在打開 Modal 時生成圖片
-                const openShareImageModal = (event) => {
-                    shareEvent.value = event;
-                    showShareImageModal.value = true;
-                    nextTick(() => {
-                        generateOgImage(event);
-                    });
-                }
-                
-                const generateOgImage = (event) => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const ctx = canvas.getContext('2d');
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    const color = event.color || themeColor.value;
-                    const dateDisplay = event.date || '未知日期';
-                    const titleDisplay = event.title || '未命名活動';
-
-                    // 0. 清除並設定背景
-                    ctx.clearRect(0, 0, width, height);
-                    const gradient = ctx.createLinearGradient(0, 0, width, height);
-                    gradient.addColorStop(0, adjustColor(color, 120));
-                    gradient.addColorStop(1, adjustColor(color, 180));
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, width, height);
-                    
-                    // 1. 藝人/標題背景
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(0, height - 120, width, 120);
-
-                    // 2. 陰影和文字顏色
-                    ctx.fillStyle = 'white';
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                    ctx.shadowBlur = 4;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
-                    
-                    // 3. 藝人名稱 (大字)
-                    ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
-                    ctx.fillText(event.artist || '無藝人資訊', 20, 50);
-
-                    // 4. 活動名稱 (底部)
-                    ctx.font = 'bold 22px "Noto Sans TC", sans-serif';
-                    ctx.fillText(titleDisplay, 20, height - 70);
-
-                    // 5. 日期/地點 (底部)
-                    ctx.font = '16px "Noto Sans TC", sans-serif';
-                    ctx.fillText(`${dateDisplay} | ${event.location || '未知地點'}`, 20, height - 40);
-                    
-                    // 6. Logo/Sticker (右上方)
-                    ctx.font = '40px Arial';
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = color;
-                    ctx.fillText(event.sticker || '🌟', width - 60, 60);
-                };
-
-                const downloadShareImage = () => {
-                    const canvas = document.getElementById('shareCanvas');
-                    if (!canvas) return;
-
-                    const link = document.createElement('a');
-                    link.download = `IdolTracker_${shareEvent.value.artist}_${shareEvent.value.date}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                };
-
                 const downloadBackup = () => {
                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(events.value));
                     const downloadAnchorNode = document.createElement('a');
@@ -1191,14 +1014,13 @@
 
                 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
-                    showModal, showSettingsModal, showImportModal, showTicketModal, showShareImageModal, shareEvent, ticketEvent, isEditing, form, importJson, searchQuery,
+                    showModal, showSettingsModal, showImportModal, showTicketModal, ticketEvent, isEditing, form, importJson, searchQuery,
                     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, moodStickers,
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleThemeModal, toggleSettingsModal, setTheme, updateCustomTheme, processImport, 
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
-                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle,
-                    openShareImageModal, downloadShareImage // 導出新增的分享功能
+                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle
                 };
             }
         }).mount('#app');
