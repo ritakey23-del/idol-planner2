@@ -267,13 +267,18 @@
                                     <span class="truncate">{{ event.location }}</span>
                                 </div>
 
-                                <div class="flex items-center gap-2 pt-1">
-                                    <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <i class="ph ph-calendar-plus text-sm"></i> 加入日曆
-                                    </button>
-                                    <a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <i class="ph ph-navigation-arrow text-sm"></i> 導航
-                                    </a>
+                                        <div class="flex items-center gap-2 pt-1">
+            <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                <i class="ph ph-google-logo text-sm"></i> Google 日曆
+            </button>
+            <button @click.stop="addToIosCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                <i class="ph ph-calendar-plus text-sm"></i> iOS 日曆
+            </button>
+            <a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                <i class="ph ph-navigation-arrow text-sm"></i> 導航
+            </a>
+        </div>
+
                                 </div>
                                 
                                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-slate-100">
