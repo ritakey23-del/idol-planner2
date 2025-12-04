@@ -268,12 +268,17 @@
                                 </div>
 
                                 <div class="flex items-center gap-2 pt-1">
-                                    <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <i class="ph ph-calendar-plus text-sm"></i> 加入日曆
-                                    </button>
-                                    <a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <i class="ph ph-navigation-arrow text-sm"></i> 導航
-                                    </a>
+    <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+        <i class="ph ph-calendar-plus text-sm"></i> 加入日曆 (ICS)
+    </button>
+    <a :href="getGoogleCalendarLink(event)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+        <i class="ph ph-google-chrome-logo text-sm"></i> 加入 Google
+    </a>
+</div>
+<a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+    <i class="ph ph-navigation-arrow text-sm"></i> 導航
+</a>
+
                                 </div>
                                 
                                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-slate-100">
@@ -1010,18 +1015,46 @@
                     if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
                 };
 
-                // Calendar
-                const addToCalendar = (event) => {
-                    const { title, date, time, location, artist } = event;
-                    const startDateTime = new Date(`${date}T${time}`).toISOString().replace(/-|:|\.\d+/g, "");
-                    const endDateTime = new Date(new Date(`${date}T${time}`).getTime() + 3*60*60*1000).toISOString().replace(/-|:|\.\d+/g, "");
-                    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title} - ${artist}\nDTSTART:${startDateTime}\nDTEND:${endDateTime}\nLOCATION:${location}\nDESCRIPTION:追星日記行程\nEND:VEVENT\nEND:VCALENDAR`;
-                    const blob = new Blob([icsContent], { type: 'text/calendar' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = `${title}.ics`;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-                };
+                  // index.html.txt 新增於 getDaysDiff 之後，addToCalendar 之前
+// Google Calendar Link Generator
+const getGoogleCalendarLink = (event) => {
+    const { title, date, time, location, artist } = event;
+    const start = new Date(`${date}T${time}`);
+    const end = new Date(start.getTime() + 3 * 60 * 60 * 1000); // 預設活動持續 3 小時
+
+    const formatDateForGoogle = (d) => {
+        // Google 日曆的時間格式: YYYYMMDDTHHmmssZ (UTC)
+        return d.toISOString().replace(/-|:|\.\d+/g, "").slice(0, 15) + 'Z';
+    };
+
+    const startTime = formatDateForGoogle(start);
+    const endTime = formatDateForGoogle(end);
+    
+    // Google 日曆建立事件的 URL 格式 (使用 render action=TEMPLATE)
+    const url = new URL('https://calendar.google.com/calendar/render');
+    url.searchParams.set('action', 'TEMPLATE');
+    url.searchParams.set('text', `${title} - ${artist}`);
+    url.searchParams.set('dates', `${startTime}/${endTime}`);
+    url.searchParams.set('location', location);
+    url.searchParams.set('details', '透過追星日記新增的行程');
+    
+    return url.toString();
+};
+
+// Calendar (現在專注處理 ICS 檔案下載)
+const addToCalendar = (event) => {
+    const { title, date, time, location, artist } = event;
+    const startDateTime = new Date(`${date}T${time}`).toISOString().replace(/-|:|\.\d+/g, "");
+    const endDateTime = new Date(new Date(`${date}T${time}`).getTime() + 3*60*60*1000).toISOString().replace(/-|:|\.\d+/g, "");
+    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title} - ${artist}\nDTSTART:${startDateTime}\nDTEND:${endDateTime}\nLOCATION:${location}\nDESCRIPTION:追星日記行程\nEND:VEVENT\nEND:VCALENDAR`;
+    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${title}.ics`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+};
+          
+
 
                 // Ticket Logic
                 const showTicket = (evt) => {
@@ -1126,7 +1159,7 @@
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
-                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle
+                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle, getGoogleCalendarLink
                 };
             }
         }).mount('#app');
