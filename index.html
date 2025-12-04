@@ -262,18 +262,37 @@
                                     {{ event.seat }}
                                 </div>
                                 
-                                <div class="flex items-center gap-2 truncate pr-2">
-                                    <i class="ph ph-map-pin shrink-0" :style="{ color: getEventColor(event) }"></i>
-                                    <span class="truncate">{{ event.location }}</span>
-                                </div>
+                                <div class="grid grid-cols-3 gap-2 pt-1">
+    <button @click.stop="addToCalendar(event)" class="py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+        <i class="ph ph-calendar-plus text-sm"></i> 日曆
+    </button>
+    
+    <a :href="getGoogleCalendarLink(event)" @click.stop target="_blank" class="py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-[10px] font-bold text-blue-600 flex items-center justify-center gap-1.5 transition-colors">
+        <i class="ph ph-google-chrome text-sm"></i> Google
+    </a>
 
-                                <div class="flex items-center gap-2 pt-1">
-                                    <button @click.stop="addToCalendar(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <i class="ph ph-calendar-plus text-sm"></i> 加入日曆
-                                    </button>
-                                    <a :href="getMapLink(event.location)" @click.stop target="_blank" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <i class="ph ph-navigation-arrow text-sm"></i> 導航
-                                    </a>
+    <a :href="getMapLink(event.location)" @click.stop target="_blank" class="py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+        <i class="ph ph-navigation-arrow text-sm"></i> 導航
+    </a>
+</div>
+// [新增功能] 產生 Google 日曆新增事件連結
+const getGoogleCalendarLink = (event) => {
+    const { title, date, time, location, artist, memo } = event;
+    const start = `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
+    // 預設活動長度為 3 小時
+    const endDate = new Date(new Date(`${date}T${time}`).getTime() + 3*60*60*1000);
+    const end = `${endDate.toISOString().split('T')[0].replace(/-/g, '')}T${endDate.toTimeString().split(' ')[0].replace(/:/g, '')}00`;
+
+    const details = `活動：${title}%0A藝人：${artist}%0A地點：${location}%0A筆記：${memo || '無心得筆記'}`;
+
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}%20(%20${artist}%20)&dates=${start}/${end}&details=${details}&location=${encodeURIComponent(location)}&sf=true&output=xml`;
+};
+
+</div>
+
+                      
+          </div>
+
                                 </div>
                                 
                                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-slate-100">
@@ -1126,7 +1145,7 @@
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveChecklistState,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
-                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle
+                    downloadBackup, restoreBackup, idolNagging, addToCalendar, showTicket, getTicketPrice, updateAppTitle, getGoogleCalendarLink
                 };
             }
         }).mount('#app');
