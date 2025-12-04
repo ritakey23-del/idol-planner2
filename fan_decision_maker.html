@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>追星決策轉盤</title>
+    <title>追星決策轉盤 (視覺版)</title>
     <style>
         /* CSS 樣式區域 */
         body {
@@ -23,14 +23,35 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            color: #d9004c; /* 追星熱情色 */
+            color: #d9004c;
             margin-bottom: 25px;
         }
 
+        /* ------------------ Canvas 轉盤區 ------------------ */
+        #wheelCanvas {
+            border: 3px solid #ccc;
+            border-radius: 50%; /* 確保是圓形 */
+            margin: 20px auto;
+            display: block;
+            background-color: #eee;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            touch-action: manipulation; /* 防止觸摸時預設滾動 */
+        }
+        .arrow {
+            position: relative;
+            margin: -60px auto 20px; /* 向上移動到轉盤上方 */
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid #d9004c; /* 紅色箭頭 */
+            z-index: 10; /* 確保箭頭在轉盤之上 */
+        }
+        
         /* ------------------ 輸入區 ------------------ */
         textarea {
             width: 95%;
-            height: 150px;
+            height: 100px; /* 稍微縮小 */
             padding: 10px;
             margin-bottom: 15px;
             border: 2px solid #ddd;
@@ -49,7 +70,7 @@
         }
 
         /* ------------------ 按鈕 ------------------ */
-        #decide-btn {
+        #spin-btn {
             padding: 15px 30px;
             font-size: 1.2rem;
             font-weight: bold;
@@ -61,52 +82,34 @@
             transition: background-color 0.3s, transform 0.1s;
             box-shadow: 0 4px #0f58b7;
         }
-        #decide-btn:active {
+        #spin-btn:active {
             transform: translateY(2px);
             box-shadow: 0 2px #0f58b7;
         }
-        #decide-btn:disabled {
+        #spin-btn:disabled {
             background-color: #ccc;
             box-shadow: none;
             cursor: not-allowed;
         }
 
         /* ------------------ 結果區 ------------------ */
-        #result-box {
-            margin-top: 35px;
-            padding: 30px 15px;
-            min-height: 80px;
-            border: 3px dashed #ccc;
-            border-radius: 10px;
-            font-size: 1.5rem;
+        #result-display {
+            margin-top: 25px;
+            padding: 15px;
+            min-height: 40px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            font-size: 1.3rem;
             font-weight: bold;
             color: #444;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.5s;
+            background-color: #f9f9f9;
         }
-        
-        /* 動畫效果：模擬轉盤正在「旋轉」 */
-        .spinning {
-            border-style: solid;
-            border-color: #d9004c;
-            animation: pulse-spin 0.2s infinite alternate;
-            color: transparent !important;
-        }
-        
-        /* 動畫效果：結果揭曉 */
-        .revealed {
+        .highlight-result {
             background-color: #d9004c;
-            color: white !important;
-            border: 3px solid #d9004c;
+            color: white;
+            border-color: #d9004c;
+            transition: all 0.5s ease-out;
             transform: scale(1.05);
-            box-shadow: 0 8px 20px rgba(217, 0, 76, 0.4);
-        }
-
-        @keyframes pulse-spin {
-            0% { transform: scale(1); border-width: 3px; }
-            100% { transform: scale(1.02); border-width: 5px; }
         }
         
         /* 儲存提示 */
@@ -120,101 +123,201 @@
 </head>
 <body>
     <div class="container">
-        <h1>✨ 追星決策轉盤 ✨</h1>
+        <h1>🎡 追星決策轉盤 (視覺版) 🎡</h1>
+
+        <div class="arrow"></div>
+        <canvas id="wheelCanvas" width="300" height="300"></canvas>
+
+        <div id="result-display">
+            轉動轉盤，讓命運為你決定！
+        </div>
+
+        <button id="spin-btn">開始轉動！</button>
 
         <div class="input-group">
             <label for="options-input">請輸入你的所有選項 (每行一個選項)：</label>
             <textarea id="options-input" placeholder="例如：
-今天要穿應援服
-今天要穿私服
-今天要穿專輯概念T恤
-(請刪除範例，輸入你的選項)">今天要穿應援服
-今天要穿私服
-今天要穿專輯概念T恤</textarea>
+今天看舊 MV
+今天看新 MV
+今天看舞台直拍
+今天看綜藝節目
+今天去追星景點
+(請刪除範例，輸入你的選項)">今天看舊 MV
+今天看新 MV
+今天看舞台直拍
+今天看綜藝節目
+今天去追星景點</textarea>
             <div id="save-status">列表已自動儲存。</div>
         </div>
         
-        <button id="decide-btn">開始決策！</button>
-
-        <div id="result-box">
-            點擊上方按鈕開始你的追星決策！
-        </div>
-
     </div>
 
     <script>
         // --- JavaScript 邏輯區域 ---
 
         const optionsInput = document.getElementById('options-input');
-        const decideBtn = document.getElementById('decide-btn');
-        const resultBox = document.getElementById('result-box');
+        const spinBtn = document.getElementById('spin-btn');
+        const resultDisplay = document.getElementById('result-display');
         const saveStatus = document.getElementById('save-status');
-        const STORAGE_KEY = 'fanDecisionOptions';
-        const SPIN_DURATION = 2000; // 轉盤持續時間 2000ms (2秒)
+        const wheelCanvas = document.getElementById('wheelCanvas');
+        const ctx = wheelCanvas.getContext('2d');
+        const STORAGE_KEY = 'fanSpinnerOptions';
 
-        // 1. 資料持久化：從 LocalStorage 載入資料
+        // 轉盤繪製參數
+        const centerX = wheelCanvas.width / 2;
+        const centerY = wheelCanvas.height / 2;
+        const radius = Math.min(centerX, centerY) - 10; // 留點邊距
+
+        let currentRotation = 0; // 當前轉盤的旋轉角度 (弧度)
+        let isSpinning = false;
+        let options = []; // 儲存選項的陣列
+
+        // 顏色庫 (確保有足夠的顏色可以循環使用)
+        const colors = ['#FFD1DC', '#FFC0CB', '#FFB6C1', '#FF69B4', '#DA70D6', '#BA55D3', '#9370DB', '#8A2BE2', '#4B0082', '#6A5ACD', '#483D8B', '#0000FF', '#0000CD', '#00008B', '#00BFFF', '#87CEEB', '#ADD8E6', '#B0E0E6', '#AFEEEE', '#00FFFF', '#E0FFFF', '#AFEEEE', '#00CED1', '#40E0D0', '#48D1CC', '#20B2AA', '#008B8B', '#008080', '#5F9EA0', '#8FBC8F', '#3CB371', '#2E8B57', '#006400', '#008000', '#228B22', '#32CD32', '#9ACD32', '#ADFF2F', '#7FFF00', '#7CFC00', '#6B8E23', '#556B2F', '#808000', '#BDB76B', '#DAA520', '#FFD700', '#FFA500', '#FF8C00', '#FF7F50', '#FF6347', '#FF4500', '#FF0000', '#DC143C', '#B22222', '#8B0000'];
+
+
+        // --- 1. 資料持久化 ---
         function loadOptions() {
             const savedOptions = localStorage.getItem(STORAGE_KEY);
             if (savedOptions) {
                 optionsInput.value = savedOptions;
             }
+            options = getCleanedOptions();
+            drawWheel(); // 載入後立即繪製轉盤
         }
         
-        // 2. 資料持久化：儲存資料到 LocalStorage
         function saveOptions() {
             localStorage.setItem(STORAGE_KEY, optionsInput.value);
-            // 提供視覺回饋
             saveStatus.textContent = '列表已自動儲存。';
             saveStatus.style.opacity = 1;
             setTimeout(() => {
                 saveStatus.style.opacity = 0;
             }, 1500);
+            
+            options = getCleanedOptions(); // 重新獲取選項
+            drawWheel(); // 重新繪製轉盤
         }
         
-        // 3. 獲取並清理選項列表
-        function getOptions() {
-            // 分割 textarea 內容，去除空白行，並去除前後空白
+        function getCleanedOptions() {
             return optionsInput.value
                 .split('\n')
                 .map(line => line.trim())
                 .filter(line => line.length > 0);
         }
 
-        // 4. 決策邏輯
-        function makeDecision() {
-            const options = getOptions();
+        // --- 2. 繪製轉盤 ---
+        function drawWheel() {
+            ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height); // 清空畫布
+
+            if (options.length === 0) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('請輸入選項', centerX, centerY);
+                return;
+            }
+
+            const arcAngle = (2 * Math.PI) / options.length; // 每個扇形的角度
+
+            for (let i = 0; i < options.length; i++) {
+                const startAngle = i * arcAngle;
+                const endAngle = (i + 1) * arcAngle;
+                const segmentColor = colors[i % colors.length]; // 循環使用顏色
+
+                // 繪製扇形
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = segmentColor;
+                ctx.fill();
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // 繪製文字 (旋轉後再繪製)
+                ctx.save(); // 保存當前狀態
+                ctx.translate(centerX, centerY); // 移動原點到中心
+                ctx.rotate(startAngle + arcAngle / 2 + Math.PI / 2); // 旋轉到扇形中間 + 90度讓文字直立
+                ctx.textAlign = 'right'; // 文字靠右對齊 (從中心往外)
+                ctx.fillStyle = (segmentColor === '#000000' || segmentColor === '#4B0082') ? '#fff' : '#333'; // 根據背景色調整文字顏色
+                ctx.font = '14px Arial';
+                ctx.fillText(options[i], radius * 0.9, 0); // 在半徑的 90% 位置繪製
+                ctx.restore(); // 恢復之前保存的狀態
+            }
+            // 繪製中心圓
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.15, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = '#999';
+            ctx.stroke();
+        }
+
+        // --- 3. 轉盤動畫邏輯 ---
+        function spinWheel() {
+            options = getCleanedOptions();
             if (options.length === 0) {
                 alert("請至少輸入一個選項！");
                 return;
             }
+            if (isSpinning) return; // 避免重複點擊
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+            resultDisplay.classList.remove('highlight-result');
+            resultDisplay.textContent = '轉動中...';
+
+            const totalSpins = 3 + Math.random() * 2; // 至少轉 3-5 圈
+            const targetIndex = Math.floor(Math.random() * options.length); // 最終停在哪個選項
             
-            // 鎖定按鈕，開始動畫
-            decideBtn.disabled = true;
-            resultBox.classList.remove('revealed');
-            resultBox.classList.add('spinning');
-            resultBox.textContent = '思考中...';
+            // 計算目標角度 (讓箭頭指向 targetIndex 的中間)
+            // 每個扇形角度 = arcAngle
+            // 目標扇形中心點角度 = targetIndex * arcAngle + arcAngle / 2
+            // 由於箭頭在正上方，轉盤需轉到讓目標扇形中心點在下方 (即與箭頭對齊)
+            const arcAngle = (2 * Math.PI) / options.length;
+            const targetAngleOffset = targetIndex * arcAngle + arcAngle / 2;
+            const finalRotation = (totalSpins * 2 * Math.PI) + (2 * Math.PI - targetAngleOffset); // 確保轉到正確位置
+            
+            let startTime = null;
+            const duration = 4000; // 轉盤動畫持續 4 秒
 
-            // 隨機選擇一個選項
-            const randomIndex = Math.floor(Math.random() * options.length);
-            const finalChoice = options[randomIndex];
+            function animateSpin(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1); // 進度 0 到 1
 
-            // 模擬轉盤時間
-            setTimeout(() => {
-                // 停止動畫，揭曉結果
-                resultBox.classList.remove('spinning');
-                resultBox.classList.add('revealed');
-                resultBox.textContent = finalChoice;
-                decideBtn.disabled = false;
-            }, SPIN_DURATION);
+                // 使用 easeOutCubic 緩動函數讓轉盤減速
+                const easedProgress = 1 - Math.pow(1 - progress, 3); // (1 - (1-x)^3)
+                
+                // 計算當前旋轉角度
+                currentRotation = easedProgress * finalRotation;
+
+                ctx.save();
+                ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+                ctx.translate(centerX, centerY);
+                ctx.rotate(currentRotation);
+                ctx.translate(-centerX, -centerY);
+                drawWheel(); // 重新繪製轉盤 (帶著新的旋轉角度)
+                ctx.restore();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    // 動畫結束
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    resultDisplay.classList.add('highlight-result');
+                    resultDisplay.textContent = `恭喜你！結果是：「${options[targetIndex]}」`;
+                }
+            }
+            requestAnimationFrame(animateSpin);
         }
 
-        // 5. 事件綁定
-        decideBtn.addEventListener('click', makeDecision);
-        
-        // 任何輸入時自動儲存 (使用 debounce 更佳，但為求簡單使用 input)
+        // --- 4. 事件綁定 ---
+        spinBtn.addEventListener('click', spinWheel);
         optionsInput.addEventListener('input', saveOptions);
         
-        // 初始化
+        // --- 5. 初始化 ---
         loadOptions();
         
     </script>
