@@ -740,7 +740,7 @@
 
            <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
-        </di<ctrl61>v>
+        </div>
 
         <transition name="slide-up">
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -1019,30 +1019,31 @@
                         `我們的故事已寫下 [DAYS] 天的章節！💫`,
                         `${name} 陪你走過 [DAYS] 個閃耀的日子！🌟`,
                         `💖 追隨 ${name} 的腳步，堅持了 [DAYS] 天，你超棒！`,
-                        `恭喜！你與 ${name} 的愛意已經累積 [DAYS] 天囉！🥰`,
+                        `恭喜！你與 ${name} 的愛意已經累積到第 [DAYS] 個日子囉！🥰`,
                         `時間證明了愛意！你已經為 ${name} 應援 [DAYS] 天！💪`,
                         `無論晴雨，你對 ${name} 的熱愛已經持續 [DAYS] 天！☀️`,
-                        // 擴充至 20+ 條
-                        `今日是 ${name} 的第 [DAYS] 個應援日，感謝你的熱情！🔥`,
-                        `這是屬於你和 ${name} 的第 [DAYS] 次心動紀念日！❤️`,
-                        `第 [DAYS] 天，你對 ${name} 的心意仍然閃閃發光！✨`,
-                        `一起奔跑吧！我們已經追隨 ${name} ${diffDays} 天了！🏃‍♀️`,
-                        `第 [DAYS] 天，讓 ${name} 成為你平凡日子裡的光！💡`,
-                        `獻給最棒的你！追星 ${diffDays} 天的榮耀屬於你！🏆`,
-                        `累積了 ${diffDays} 天的愛，只為看見 ${name} 的笑容！😊`,
-                        `從相遇那天算起，你已經默默支持 ${name} ${diffDays} 天了！🤫`,
-                        `你與 ${name} 的羈絆，已延續到第 ${diffDays} 天！🔗`,
-                        `每一次應援都值得紀錄！這是你的第 ${diffDays} 天！📝`,
-                        `為了 ${name} 而努力！你已經堅持了 ${diffDays} 天！🔋`,
-                        `充滿愛的 ${diffDays} 天，未來也會一直愛 ${name}！♾️`,
-                        `第 ${diffDays} 天，你仍是 ${name} 最堅實的後盾！🛡️`,
-                        `這份熱愛，已經持續 ${diffDays} 天，且仍在繼續！➡️`,
+                        `每個應援的瞬間都值得！${name} 的第 [DAYS] 天！🌈`,
+                        `這份熱愛從未退燒，已經 ${diffDays} 天了，${name} 知道嗎？🔥`,
+                        `數不清的星光，匯集成 ${diffDays} 個愛 ${name} 的日子！✨`,
+                        `因為你，每天都是紀念日！今天是第 ${diffDays} 天，謝謝 ${name}！🙏`,
+                        `第 ${diffDays} 天，依然是那個讓你心動的 ${name}！❤️`,
+                        `愛情的長跑者是你！你和 ${name} 已經一起跑了 ${diffDays} 天！🏃‍♀️`,
+                        `為了 ${name}，你已經變成了最棒的自己，持續了 ${diffDays} 天！💯`,
+                        `每一天都像初見一樣心動！與 ${name} 相伴的 ${diffDays} 天！悸動！😍`,
+                        `讓 ${name} 成為你生活的重心，已經 ${diffDays} 天了，開心嗎？🥳`,
+                        `這就是追星的浪漫！你見證了 ${name} 的 ${diffDays} 天成長！📈`,
+                        `還記得嗎？當初遇見 ${name} 的第 ${diffDays} 天！回憶殺！🥲`,
+                        `讓 ${name} 的音樂充滿你的生活，已經 ${diffDays} 天的幸福！🎧`,
+                        `你已經是 ${name} 重要的支柱，這是你們的第 ${diffDays} 天紀念！💪`,
+                        `你將 ${name} 刻在了生命中，這 ${diffDays} 天的努力沒有白費！💎`,
                     ];
                     
-                    const messageTemplate = messages[diffDays % messages.length];
+                    const randomIndex = calculateFandomDays(fandom.date) % messages.length;
+                    const messageTemplate = messages[randomIndex];
+                    
                     // 返回包含情緒文字和天數數字的物件
                     return {
-                        message: messageTemplate.replace(/\[DAYS\]/g, `${diffDays}`),
+                        message: messageTemplate.replace(` ${diffDays} `, ' [DAYS] ').replace(` ${diffDays} `, ' [DAYS] '),
                         days: diffDays
                     };
                 };
@@ -1057,17 +1058,14 @@
                     const currentFandom = fandoms.value[currentFandomIndex.value];
                     if (!currentFandom) return "";
 
-                    const diffDays = calculateFandomDays(currentFandom.date);
-                    
+                    const { message, days } = fandomMessageStatic(currentFandom);
+
                     // 每 5 秒自動切換
                     setTimeout(() => {
                         currentFandomIndex.value = (currentFandomIndex.value + 1) % fandoms.value.length;
                     }, 5000);
                     
-                    // 情緒價值邏輯 (使用 Static version 確保一致性)
-                    const staticData = fandomMessageStatic(currentFandom);
-                    // 為了 Header 顯示效果，我們將天數數字嵌入到訊息中
-                    return staticData.message.replace(`${staticData.days}`, `${staticData.days}`); 
+                    return message.replace('[DAYS]', days);
                 });
                 
                 const greetingMessage = computed(() => {
