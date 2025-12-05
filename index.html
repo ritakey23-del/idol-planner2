@@ -138,37 +138,36 @@
 
     <div id="app" :style="cssVars" class="h-full flex flex-col relative w-full">
 
-        <header class="text-white pt-10 pb-4 px-5 shadow-lg rounded-b-[1.5rem] z-20 shrink-0 transition-colors duration-200"
-     
+        <header :class="headerTextColor" class="pt-10 pb-4 px-5 shadow-lg rounded-b-[1.5rem] z-20 shrink-0 transition-colors duration-200"
             :style="{ backgroundColor: themeColor }">
             <div class="flex justify-between items-center mb-3">
                 <div>
                     <h1 class="text-xl font-bold tracking-wide">{{ customTitle }}</h1>
-                    <p class="text-white/80 text-xs opacity-90">{{ greetingMessage }}</p>
-    
-             </div>
-                <div class="bg-white/20 p-2 rounded-full backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" @click="toggleSettingsModal">
+                    <p :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-xs opacity-90">{{ greetingMessage }}</p>
+                </div>
+                <div :class="isThemeColorLight ? 'bg-black/10 hover:bg-black/20 text-slate-700' : 'bg-white/20 hover:bg-white/30 text-white'" 
+                     class="p-2 rounded-full backdrop-blur-sm cursor-pointer transition-colors" @click="toggleSettingsModal">
                     <i class="ph ph-gear text-lg"></i>
                 </div>
             </div>
             
  
             <div class="flex gap-3 mt-1" v-if="activeTab === 'home'">
-                <div class="bg-white/20 backdrop-blur-md rounded-xl p-2.5 flex-1 text-center">
-                    <div class="text-[10px] text-white/80 mb-0.5">倒數中</div>
+                <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2.5 flex-1 text-center">
+                    <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">倒數中</div>
                     <div class="text-lg font-bold">{{ upcomingCount }} <span class="text-xs font-normal">場</span></div>
            
-          </div>
-                <div class="bg-white/20 backdrop-blur-md rounded-xl p-2.5 flex-1 text-center relative group">
-                    <div class="text-[10px] text-white/80 mb-0.5">年度花費</div>
+                </div>
+                <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2.5 flex-1 text-center relative group">
+                    <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">年度花費</div>
                     <div class="text-lg font-bold">
                          {{ 
  isPrivacyMode ? '****' : '$' + formatMoney(currentYearExpense) }}
                     </div>
-                     <button @click="togglePrivacy" class="absolute top-1.5 right-1.5 text-white/50 hover:text-white">
+                     <button @click="togglePrivacy" class="absolute top-1.5 right-1.5" :class="isThemeColorLight ? 'text-slate-500 hover:text-slate-800' : 'text-white/50 hover:text-white'">
                         <i class="ph" :class="isPrivacyMode ? 'ph-eye-slash' : 'ph-eye'"></i>
                 
-          </button>
+                    </button>
                 </div>
             </div>
         </header>
@@ -555,7 +554,8 @@
                         <div class="h-20 relative flex items-center justify-center" :style="{ backgroundColor: getEventColor(ticketEvent) }">
       
                          <img v-if="ticketEvent.coverUrl" :src="ticketEvent.coverUrl" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay">
-                             <h2 class="text-white font-bold text-xl relative z-10 drop-shadow-md">{{ ticketEvent.artist }}</h2>
+                         <h2 :class="isColorLight(getEventColor(ticketEvent)) ? 'text-slate-800' : 'text-white'" 
+                             class="font-bold text-xl relative z-10 drop-shadow-md">{{ ticketEvent.artist }}</h2>
                         </div>
        
                    <div class="p-6 text-center space-y-4">
@@ -847,6 +847,19 @@
                     b = Math.min(255, Math.max(0, b));
                     return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
                 };
+                
+                // 通用亮度判斷函數
+                const isColorLight = (color) => {
+                    let hex = color.replace('#', '');
+                    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+                    const r = parseInt(hex.substring(0, 2), 16);
+                    const g = parseInt(hex.substring(2, 4), 16);
+                    const b = parseInt(hex.substring(4, 6), 16);
+                    
+                    // HSP 亮度判斷 (閾值 180)
+                    const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+                    return hsp > 180;
+                };
 
                 const cssVars = computed(() => ({
                     '--primary-color': themeColor.value,
@@ -854,6 +867,10 @@
                     '--primary-light': adjustColor(themeColor.value, 150)
                 }));
                 const getEventColor = (event) => (!event.color || event.color === '') ? themeColor.value : event.color;
+                
+                // Header 相關的動態顏色判斷
+                const isThemeColorLight = computed(() => isColorLight(themeColor.value));
+                const headerTextColor = computed(() => isThemeColorLight.value ? 'text-slate-800' : 'text-white');
                 
                 const greetingMessage = computed(() => {
                     const hour = new Date().getHours();
@@ -1352,7 +1369,8 @@
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
-                    downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle
+                    downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
+                    isColorLight, isThemeColorLight, headerTextColor
                 };
             }
         }).mount('#app');
