@@ -619,6 +619,36 @@
             </div>
         </transition>
 
+        <transition name="slide-up">
+            <div v-if="showChangelogModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showChangelogModal = false"></div>
+                <div class="bg-white w-full max-w-md max-h-[90vh] sm:rounded-2xl rounded-t-3xl p-6 relative flex flex-col shadow-2xl overflow-hidden h-auto mb-safe">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h2 class="text-xl font-bold text-slate-800">更新日誌 📄</h2>
+                        <button @click="showChangelogModal = false" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="overflow-y-auto flex-1 no-scrollbar space-y-6">
+
+                        <div v-for="log in changelogContent" :key="log.version" class="border-b pb-4 border-slate-100 last:border-0">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="font-bold text-lg text-slate-800">{{ log.version }}</span>
+                                <span class="text-xs text-slate-400">{{ log.date }}</span>
+                            </div>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1 pl-4">
+                                <li v-for="(item, index) in log.items" :key="index">{{ item }}</li>
+                            </ul>
+                        </div>
+                        
+                        <p class="text-center text-sm text-slate-400 pt-2">— 這是所有歷史版本紀錄 —</p>
+
+                    </div>
+                    <div class="shrink-0 pt-4">
+                        <button @click="showChangelogModal = false" :style="{ backgroundColor: themeColor }" class="w-full text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-transform">返回</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
         <div v-if="showSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showSettingsModal = false">
             <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
                 <h3 class="font-bold text-lg mb-4 text-slate-700">資料與主題設定 ⚙️</h3>
@@ -655,12 +685,11 @@
                 <div class="mt-4 border-t border-slate-100 pt-4 text-xs text-slate-400 text-left">
                     <p class="font-bold text-slate-600 mb-1">App 版本資訊</p>
                     <p>當前版本: <span class="font-mono text-slate-800">{{ appVersion }}</span></p>
-                    <a href="https://github.com/ritakey23-del/idol-planner2/releases" 
-                       target="_blank" 
-                       class="text-primary hover:underline mt-1 block font-medium"
-                       :style="{ color: themeColor }">
-                        ✨ 查看更新日誌 (GitHub)
-                    </a>
+                    <button @click="showChangelog" 
+                        class="text-primary hover:underline mt-1 block font-medium text-xs text-left cursor-pointer"
+                        :style="{ color: themeColor }">
+                        📄 查看更新日誌
+                    </button>
                 </div>
 
            <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
@@ -791,6 +820,7 @@
                 const showImportModal = ref(false);
                 const showTicketModal = ref(false);
                 const showCalendarModal = ref(false); 
+                const showChangelogModal = ref(false); // <--- NEW STATE
                 const calendarEvent = ref(null);     
   
                 const ticketEvent = ref({}); 
@@ -809,6 +839,11 @@
                 const presetColors = ['#63b3b0', '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#1dd1a1'];
                 const customTitle = ref(localStorage.getItem('appTitle') || '追星日記 ✨');
                 const appVersion = ref('v1.0.0'); // <--- 版本號狀態
+
+                const changelogContent = ref([ // <--- 更新日誌內容
+                    { version: 'v1.0.0', date: '2025/12/06', items: ['初始版本發布', '支援行程、費用、地圖紀錄', '新增主題色自適應功能', '優化加入日曆多選單'] },
+                    { version: 'v0.9.0', date: '2025/11/20', items: ['Beta 測試', '新增資料備份/還原'] },
+                ]);
 
                 onMounted(() => {
                     const savedEvents = localStorage.getItem('idolEvents');
@@ -1159,6 +1194,11 @@
                     }
                     localStorage.setItem('appTitle', customTitle.value);
                 }
+                
+                const showChangelog = () => {
+                    showSettingsModal.value = false; // 關閉設定頁
+                    showChangelogModal.value = true;
+                };
 
                 const searchCoordinates = async () => {
                     if (!form.value.location) {
@@ -1375,16 +1415,16 @@
 
                 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
-                    showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, calendarEvent, ticketEvent, isEditing, form, importJson, searchQuery,
+                    showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, showChangelogModal, calendarEvent, ticketEvent, isEditing, form, importJson, searchQuery,
                     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, 
               
-                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, 
+                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
-                    isColorLight, isThemeColorLight, headerTextColor, appVersion
+                    isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent
                 };
             }
         }).mount('#app');
