@@ -650,6 +650,19 @@
                     </div>
                 </div>
              
+                <hr class="border-slate-100 my-4">
+
+                <div class="mt-4 border-t border-slate-100 pt-4 text-xs text-slate-400 text-left">
+                    <p class="font-bold text-slate-600 mb-1">App 版本資訊</p>
+                    <p>當前版本: <span class="font-mono text-slate-800">{{ appVersion }}</span></p>
+                    <a href="https://github.com/ritakey23-del/idol-planner2/releases" 
+                       target="_blank" 
+                       class="text-primary hover:underline mt-1 block font-medium"
+                       :style="{ color: themeColor }">
+                        ✨ 查看更新日誌 (GitHub)
+                    </a>
+                </div>
+
            <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
         </div>
@@ -795,7 +808,8 @@
                 const form = ref({ ...defaultForm });
                 const presetColors = ['#63b3b0', '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#1dd1a1'];
                 const customTitle = ref(localStorage.getItem('appTitle') || '追星日記 ✨');
-                
+                const appVersion = ref('v1.0.0'); // <--- 版本號狀態
+
                 onMounted(() => {
                     const savedEvents = localStorage.getItem('idolEvents');
                     if (savedEvents) {
@@ -1370,7 +1384,7 @@
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
-                    isColorLight, isThemeColorLight, headerTextColor
+                    isColorLight, isThemeColorLight, headerTextColor, appVersion
                 };
             }
         }).mount('#app');
