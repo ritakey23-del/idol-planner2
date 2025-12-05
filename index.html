@@ -436,9 +436,10 @@
                         </div>
                         <div class="text-center bg-slate-50 p-3 rounded-xl border border-slate-100">
                             <div class="text-sm font-medium text-slate-600 mb-1">
-                                {{ fandomMessageStatic(fan) }}
+                                {{ fandomMessageStatic(fan).message.split('[DAYS]')[0] }}
+                                <span class="text-3xl font-extrabold" :style="{ color: themeColor }">{{ fandomMessageStatic(fan).days }}</span>
+                                {{ fandomMessageStatic(fan).message.split('[DAYS]')[1] }}
                             </div>
-                            <div class="text-3xl font-extrabold" :style="{ color: themeColor }">{{ calculateFandomDays(fan.date) }}</div>
                         </div>
                     </div>
                 </div>
@@ -739,7 +740,7 @@
 
            <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
-        </div>
+        </di<ctrl61>v>
 
         <transition name="slide-up">
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -754,18 +755,18 @@
                     <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32 pt-4">
                     
       <div class="space-y-4">
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                              <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片連結 (URL)</label><div class="relative flex-1"><i class="ph ph-image absolute left-3 top-3.5 text-slate-400"></i><input v-model="form.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none 
  rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div><p class="text-xs text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，豐富你的行程卡片！</p></div>
 
                             <div class="grid grid-cols-[1fr,60px] gap-3">
-                                <div><label class="block text-sm font-medium text-slate-500 mb-1">歌手/團體</label><input v-model="form.artist" type="text" placeholder="Taylor Swift" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                                <div><label class="block text-sm font-medium text-slate-500 mb-1">歌手/團體</label><input v-model="form.artist" type="text" placeholder="例如: Taylor Swift" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
          
                          <div><label class="block text-sm font-medium text-slate-500 mb-1">應援色</label><div class="h-[46px] w-full relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><input v-model="form.color" type="color" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer p-0 border-0"></div></div>
                             </div>
                        
       
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">心情貼紙 (Emoji)</label><input v-model="form.sticker" type="text" placeholder="✨" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">心情貼紙 (Emoji)</label><input v-model="form.sticker" type="text" placeholder="輸入一個 Emoji" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
 
                             <div class="grid grid-cols-2 gap-4">
             
@@ -773,7 +774,7 @@
                                 <div><label class="block text-sm font-medium text-slate-500 mb-1">時間</label><input v-model="form.time" type="time" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                   
             </div>
-                             <div><label class="block text-sm font-medium text-slate-500 mb-1">座位 (印在票根上)</label><input v-model="form.seat" type="text" placeholder="搖滾A區 1號" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                             <div><label class="block text-sm font-medium text-slate-500 mb-1">座位 (印在票根上)</label><input v-model="form.seat" type="text" placeholder="例如: 搖滾A區 1號" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                              <div><label class="block text-sm font-medium text-slate-500 mb-1">地點</label><div class="flex gap-2"><div class="relative flex-1"><i class="ph ph-map-pin absolute 
  left-3 top-3.5 text-slate-400"></i><input v-model="form.location" type="text" placeholder="地點" class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div><button @click="searchCoordinates" class="bg-blue-50 text-blue-600 px-3 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center shrink-0"><i class="ph ph-crosshair text-lg"></i></button></div></div>
                              <p v-if="searchError" class="text-xs font-medium mt-2 p-2 rounded-lg" :class="searchError.includes('成功') ?
@@ -1015,12 +1016,35 @@
                     const diffDays = calculateFandomDays(fandom.date);
                     const name = fandom.name;
                     const messages = [
-                        `🎉 恭喜！這是你追隨 ${name} 的第 ${diffDays} 天！`,
-                        `你對 ${name} 的愛意，已累積到第 ${diffDays} 個日子了！💖`,
-                        `與 ${name} 相遇的感動，已持續 ${diffDays} 天！✨`,
-                        `愛你無悔，你已經為 ${name} 應援 ${diffDays} 天！💪`,
+                        `我們的故事已寫下 [DAYS] 天的章節！💫`,
+                        `${name} 陪你走過 [DAYS] 個閃耀的日子！🌟`,
+                        `💖 追隨 ${name} 的腳步，堅持了 [DAYS] 天，你超棒！`,
+                        `恭喜！你與 ${name} 的愛意已經累積 [DAYS] 天囉！🥰`,
+                        `時間證明了愛意！你已經為 ${name} 應援 [DAYS] 天！💪`,
+                        `無論晴雨，你對 ${name} 的熱愛已經持續 [DAYS] 天！☀️`,
+                        // 擴充至 20+ 條
+                        `今日是 ${name} 的第 [DAYS] 個應援日，感謝你的熱情！🔥`,
+                        `這是屬於你和 ${name} 的第 [DAYS] 次心動紀念日！❤️`,
+                        `第 [DAYS] 天，你對 ${name} 的心意仍然閃閃發光！✨`,
+                        `一起奔跑吧！我們已經追隨 ${name} ${diffDays} 天了！🏃‍♀️`,
+                        `第 [DAYS] 天，讓 ${name} 成為你平凡日子裡的光！💡`,
+                        `獻給最棒的你！追星 ${diffDays} 天的榮耀屬於你！🏆`,
+                        `累積了 ${diffDays} 天的愛，只為看見 ${name} 的笑容！😊`,
+                        `從相遇那天算起，你已經默默支持 ${name} ${diffDays} 天了！🤫`,
+                        `你與 ${name} 的羈絆，已延續到第 ${diffDays} 天！🔗`,
+                        `每一次應援都值得紀錄！這是你的第 ${diffDays} 天！📝`,
+                        `為了 ${name} 而努力！你已經堅持了 ${diffDays} 天！🔋`,
+                        `充滿愛的 ${diffDays} 天，未來也會一直愛 ${name}！♾️`,
+                        `第 ${diffDays} 天，你仍是 ${name} 最堅實的後盾！🛡️`,
+                        `這份熱愛，已經持續 ${diffDays} 天，且仍在繼續！➡️`,
                     ];
-                    return messages[diffDays % messages.length];
+                    
+                    const messageTemplate = messages[diffDays % messages.length];
+                    // 返回包含情緒文字和天數數字的物件
+                    return {
+                        message: messageTemplate.replace(/\[DAYS\]/g, `${diffDays}`),
+                        days: diffDays
+                    };
                 };
 
                 // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
@@ -1040,19 +1064,10 @@
                         currentFandomIndex.value = (currentFandomIndex.value + 1) % fandoms.value.length;
                     }, 5000);
                     
-                    // 情緒價值邏輯
-                    const milestoneMessages = [
-                        `我們的故事已寫下 ${diffDays} 天的章節！💫`,
-                        `${currentFandom.name} 陪你走過 ${diffDays} 個閃耀的日子！🌟`,
-                        `💖 追隨 ${currentFandom.name} 的腳步，堅持了 ${diffDays} 天，你超棒！`,
-                        `恭喜！你與 ${currentFandom.name} 的愛意已經累積 ${diffDays} 天囉！🥰`,
-                        `時間證明了愛意！你已經為 ${currentFandom.name} 應援 ${diffDays} 天！💪`,
-                        `無論晴雨，你對 ${currentFandom.name} 的熱愛已經持續 ${diffDays} 天！☀️`,
-                    ];
-                    
-                    const randomMilestone = milestoneMessages[Math.floor(Math.random() * milestoneMessages.length)];
-
-                    return randomMilestone;
+                    // 情緒價值邏輯 (使用 Static version 確保一致性)
+                    const staticData = fandomMessageStatic(currentFandom);
+                    // 為了 Header 顯示效果，我們將天數數字嵌入到訊息中
+                    return staticData.message.replace(`${staticData.days}`, `${staticData.days}`); 
                 });
                 
                 const greetingMessage = computed(() => {
