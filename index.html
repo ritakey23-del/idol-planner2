@@ -154,6 +154,10 @@
  
             <div class="flex gap-3 mt-1" v-if="activeTab === 'home'">
                 <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2.5 flex-1 text-center">
+                    <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">追星天數</div>
+                    <div class="text-lg font-bold">{{ fandomDays }} <span class="text-xs font-normal">天</span></div>
+                </div>
+                <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2.5 flex-1 text-center">
                     <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">倒數中</div>
                     <div class="text-lg font-bold">{{ upcomingCount }} <span class="text-xs font-normal">場</span></div>
            
@@ -541,7 +545,7 @@
         
          :class="activeTab === 'stats' ?
  '' : 'text-slate-400'" :style="{ color: activeTab === 'stats' ? themeColor : '' }">
-                <i class="ph text-2xl ph-chart-pie-slice" :class="{ 'ph-fill': activeTab === 'stats', 'ph-bold': activeTab !== 'stats' }"></i>
+                <i class="ph text-2xl ph-chart-bar" :class="{ 'ph-fill': activeTab === 'stats', 'ph-bold': activeTab !== 'stats' }"></i>
                 <span class="text-[10px] font-medium">回顧</span>
             </button>
         </nav>
@@ -654,13 +658,17 @@
                 <h3 class="font-bold text-lg mb-4 text-slate-700">資料與主題設定 ⚙️</h3>
                 
                 <div class="mb-6 border-b border-slate-100 pb-4">
-   
-                  <p class="text-xs font-medium text-slate-500 mb-2">App 標題</p>
-                    <input type="text" v-model="customTitle" @input="updateAppTitle" placeholder="例如：我的追星天堂"
+                    <p class="text-xs font-medium text-slate-500 mb-2">App 標題</p>
+                    <input type="text" v-model="customTitle" @change="updateAppTitle" placeholder="例如：我的追星天堂"
                            class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-primary/50 focus:border-primary/50">
                 </div>
-
- 
+                
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <p class="text-xs font-medium text-slate-500 mb-2">追星起始日 (入坑日)</p>
+                    <input type="date" v-model="fandomStartDate" @change="saveFandomDate"
+                           class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-2 focus:ring-primary/50 focus:border-primary/50">
+                </div>
+                
                 <div class="mb-6">
                     <p class="text-xs text-slate-400 mb-2">全域主題色</p>
                     <div class="grid grid-cols-4 gap-3 mb-3">
@@ -820,7 +828,7 @@
                 const showImportModal = ref(false);
                 const showTicketModal = ref(false);
                 const showCalendarModal = ref(false); 
-                const showChangelogModal = ref(false); // <--- NEW STATE
+                const showChangelogModal = ref(false);
                 const calendarEvent = ref(null);     
   
                 const ticketEvent = ref({}); 
@@ -838,9 +846,10 @@
                 const form = ref({ ...defaultForm });
                 const presetColors = ['#63b3b0', '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#1dd1a1'];
                 const customTitle = ref(localStorage.getItem('appTitle') || '追星日記 ✨');
-                const appVersion = ref('v1.0.0'); // <--- 版本號狀態
+                const appVersion = ref('v1.0.0');
+                const fandomStartDate = ref(localStorage.getItem('fandomStartDate') || ''); // <--- NEW STATE
 
-                const changelogContent = ref([ // <--- 更新日誌內容
+                const changelogContent = ref([ 
                     { version: 'v1.0.0', date: '2025/12/06', items: ['初始版本發布', '支援行程、費用、地圖紀錄', '新增主題色自適應功能', '優化加入日曆多選單'] },
                     { version: 'v0.9.0', date: '2025/11/20', items: ['Beta 測試', '新增資料備份/還原'] },
                 ]);
@@ -920,6 +929,19 @@
                 // Header 相關的動態顏色判斷
                 const isThemeColorLight = computed(() => isColorLight(themeColor.value));
                 const headerTextColor = computed(() => isThemeColorLight.value ? 'text-slate-800' : 'text-white');
+                
+                const fandomDays = computed(() => { 
+                    if (!fandomStartDate.value) return 0;
+                    const start = new Date(fandomStartDate.value);
+                    const today = new Date();
+                    const diffTime = today.getTime() - start.getTime();
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays > 0 ? diffDays : 0;
+                });
+
+                const saveFandomDate = () => {
+                    localStorage.setItem('fandomStartDate', fandomStartDate.value);
+                };
                 
                 const greetingMessage = computed(() => {
                     const hour = new Date().getHours();
@@ -1188,7 +1210,7 @@
                 
                 const toggleSettingsModal = () => showSettingsModal.value = !showSettingsModal.value;
                 
-                const updateAppTitle = () => {
+                const updateAppTitle = () => { // <--- FIXED LOGIC
                     if (customTitle.value.trim() === '') {
                         customTitle.value = '追星日記 ✨';
                     }
@@ -1196,7 +1218,7 @@
                 }
                 
                 const showChangelog = () => {
-                    showSettingsModal.value = false; // 關閉設定頁
+                    showSettingsModal.value = false;
                     showChangelogModal.value = true;
                 };
 
@@ -1420,7 +1442,7 @@
               
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
-                    calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist,
+                    calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandomDate, fandomDays, fandomStartDate,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
