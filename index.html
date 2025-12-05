@@ -124,7 +124,7 @@
  left: 10px; z-index: 99999; 
             background-color: #ef4444; color: white; padding: 8px 16px; 
             border-radius: 8px; font-weight: bold; font-size: 12px;
- box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid white;
             cursor: pointer;
  }
     </style>
@@ -436,25 +436,36 @@
                             <div class="p-4" :class="{'bg-slate-50': !fan.coverUrl}">
                                 <div class="flex justify-between items-start">
                                     <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                        <span class="text-2xl">{{ fan.sticker }}</span>
+                                        <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
                                         {{ fan.name }}
                                     </h3>
-                                    <button @click="removeFandom(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-trash text-lg"></i></button>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-1">入坑日: {{ fan.date }}</p>
-                                
-                                <div class="text-center mt-4 p-3 rounded-lg border border-dashed border-slate-200 bg-white shadow-inner">
-                                    <div class="text-sm font-medium text-slate-600 mb-1">
-                                        {{ fandomMessageStatic(fan).message.split('[DAYS]')[0] }}
-                                        <span class="text-3xl font-extrabold" :style="{ color: themeColor }">{{ calculateFandomDays(fan.date) }}</span>
-                                        {{ fandomMessageStatic(fan).message.split('[DAYS]')[1] }}
+                                    <div class="flex gap-2">
+                                        <button @click="editFandom(fan, index)" class="text-slate-400 hover:text-blue-500 p-1"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                        <button @click="removeFandom(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-trash text-lg"></i></button>
                                     </div>
                                 </div>
                                 
-                                <div v-if="fan.mainDate" class="mt-3 text-xs text-slate-600 flex items-center justify-center gap-1">
-                                    <i class="ph ph-gift text-sm text-red-500"></i>
-                                    距離 {{ fan.name }} 生日/出道日還有 
-                                    <span class="font-bold text-red-500">{{ calculateFandomDays(fan.mainDate) }} 天</span>
+                                <div class="text-center mt-4 p-3 rounded-lg border border-dashed border-slate-200 bg-white shadow-inner">
+                                    <p class="text-sm font-medium text-slate-600 mb-2">入坑日: {{ fan.date }}</p>
+
+                                    <div class="text-sm font-medium text-slate-600 mb-1">
+                                        {{ fandomMessageStatic(fan).message.split(fandomMessageStatic(fan).days)[0] }}
+                                        <span class="text-3xl font-extrabold" :style="{ color: themeColor }">{{ calculateFandomDays(fan.date) }}</span>
+                                        {{ fandomMessageStatic(fan).message.split(fandomMessageStatic(fan).days)[1] }}
+                                    </div>
+                                </div>
+                                
+                                <div v-if="fan.birthday || fan.debutDate" class="mt-3 space-y-1">
+                                    <div v-if="fan.birthday" class="text-xs text-slate-600 flex items-center justify-center gap-1">
+                                        <i class="ph ph-cake text-sm text-pink-500"></i>
+                                        距離生日還有 
+                                        <span class="font-bold text-pink-500">{{ calculateFandomDays(fan.birthday) }} 天</span>
+                                    </div>
+                                    <div v-if="fan.debutDate" class="text-xs text-slate-600 flex items-center justify-center gap-1">
+                                        <i class="ph ph-microphone-stage text-sm text-indigo-500"></i>
+                                        距離出道日還有 
+                                        <span class="font-bold text-indigo-500">{{ calculateFandomDays(fan.debutDate) }} 天</span>
+                                    </div>
                                 </div>
                                 
                             </div>
@@ -477,7 +488,8 @@
                         <input type="text" v-model="newFandomDate" placeholder="入坑日期 (YYYY-MM-DD)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
                         <input type="text" v-model="newFandomSticker" placeholder="代表 Emoji (例如: ✨)" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
                         <input type="text" v-model="newFandomCoverUrl" placeholder="封面圖片 URL (選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="text" v-model="newFandomMainDate" placeholder="重要日期 YYYY-MM-DD (生日/出道日，選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
+                        <input type="text" v-model="newFandomBirthday" placeholder="生日 (YYYY-MM-DD, 選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
+                        <input type="text" v-model="newFandomDebutDate" placeholder="出道日 (YYYY-MM-DD, 選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
                         
                         <button @click="addFandom" class="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold active:scale-95 transition-transform shadow-md" :style="{ backgroundColor: themeColor }">
                             + 新增入坑日
@@ -890,10 +902,13 @@
                 const showTicketModal = ref(false);
                 const showCalendarModal = ref(false); 
                 const showChangelogModal = ref(false);
+                const showFandomModal = ref(false); // NEW FANDOM MODAL STATE
                 const calendarEvent = ref(null);     
   
                 const ticketEvent = ref({}); 
                 const isEditing = ref(false);
+                const isFandomEditing = ref(false); // NEW FANDOM EDITING STATE
+                const editFandomIndex = ref(null); // NEW FANDOM EDIT INDEX
                 const importJson = ref('');
                 let map = null;
                 let markers = [];
@@ -912,12 +927,16 @@
                 // --- FANDOM STATES ---
                 const fandoms = ref(JSON.parse(localStorage.getItem('fandomFandoms') || '[]')); 
                 const currentFandomIndex = ref(0);
-                const newFandomName = ref('');
-                const newFandomDate = ref('');
-                // 新增狀態用於擴充入坑日表單
-                const newFandomSticker = ref('');
-                const newFandomCoverUrl = ref('');
-                const newFandomMainDate = ref('');
+                
+                const defaultFandomForm = {
+                    name: '',
+                    date: '', // 入坑日
+                    sticker: '',
+                    coverUrl: '',
+                    birthday: '',
+                    debutDate: '',
+                };
+                const fandomForm = ref({...defaultFandomForm});
                 // --- END FANDOM STATES ---
 
                 const changelogContent = ref([ 
@@ -929,23 +948,38 @@
                     localStorage.setItem('fandomFandoms', JSON.stringify(fandoms.value));
                 };
 
+                const openFandomModal = () => {
+                    isFandomEditing.value = false;
+                    editFandomIndex.value = null;
+                    fandomForm.value = {...defaultFandomForm, date: new Date().toISOString().split('T')[0]};
+                    showFandomModal.value = true;
+                };
+
+                const editFandom = (fandom, index) => {
+                    isFandomEditing.value = true;
+                    editFandomIndex.value = index;
+                    fandomForm.value = JSON.parse(JSON.stringify(fandom));
+                    showFandomModal.value = true;
+                };
+
+                const closeFandomModal = () => {
+                    showFandomModal.value = false;
+                    fandomForm.value = {...defaultFandomForm};
+                };
+
+
                 const addFandom = () => {
-                    if (!newFandomName.value.trim() || !newFandomDate.value) {
+                    if (!fandomForm.value.name.trim() || !fandomForm.value.date) {
                         return alert('請填寫偶像名稱和入坑日期！');
                     }
-                    fandoms.value.push({
-                        name: newFandomName.value.trim(),
-                        date: newFandomDate.value,
-                        sticker: newFandomSticker.value,
-                        coverUrl: newFandomCoverUrl.value,
-                        mainDate: newFandomMainDate.value,
-                    });
-                    newFandomName.value = '';
-                    newFandomDate.value = '';
-                    newFandomSticker.value = '';
-                    newFandomCoverUrl.value = '';
-                    newFandomMainDate.value = '';
+                    
+                    if(isFandomEditing.value && editFandomIndex.value !== null) {
+                        fandoms.value[editFandomIndex.value] = {...fandomForm.value};
+                    } else {
+                        fandoms.value.push({...fandomForm.value});
+                    }
                     saveFandoms();
+                    closeFandomModal();
                 };
 
                 const removeFandom = (index) => {
@@ -1082,26 +1116,34 @@
 
                 // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
                 const fandomMessage = computed(() => { 
-                    if (fandoms.value.length === 0 || fandoms.value.every(f => !f.date)) {
+                    if (fandoms.value.length === 0) {
                         return "👋 點擊設定，開始你的入坑紀念日紀錄！";
                     }
                     
                     // 簡單輪播邏輯
-                    const activeFandoms = fandoms.value.filter(f => f.date);
-                    if (activeFandoms.length === 0) return "👋 點擊設定，開始你的入坑紀念日紀錄！";
+                    const currentFandom = fandoms.value[currentFandomIndex.value];
+                    if (!currentFandom) return "";
 
-                    const currentFandom = activeFandoms[currentFandomIndex.value % activeFandoms.length];
-
-                    const { message, days } = fandomMessageStatic(currentFandom);
+                    const diffDays = calculateFandomDays(currentFandom.date);
                     
                     // 每 5 秒自動切換
-                    if (activeFandoms.length > 1) {
-                        setTimeout(() => {
-                            currentFandomIndex.value = (currentFandomIndex.value + 1) % activeFandoms.length;
-                        }, 5000);
-                    }
+                    setTimeout(() => {
+                        currentFandomIndex.value = (currentFandomIndex.value + 1) % fandoms.value.length;
+                    }, 5000);
                     
-                    return message;
+                    // 情緒價值邏輯
+                    const milestoneMessages = [
+                        `我們的故事已寫下 ${diffDays} 天的章節！💫`,
+                        `${currentFandom.name} 陪你走過 ${diffDays} 個閃耀的日子！🌟`,
+                        `💖 追隨 ${currentFandom.name} 的腳步，堅持了 ${diffDays} 天，你超棒！`,
+                        `恭喜！你與 ${currentFandom.name} 的愛意已經累積 ${diffDays} 天囉！🥰`,
+                        `時間證明了愛意！你已經為 ${currentFandom.name} 應援 ${diffDays} 天！💪`,
+                        `無論晴雨，你對 ${currentFandom.name} 的熱愛已經持續 ${diffDays} 天！☀️`,
+                    ];
+                    
+                    const randomMilestone = milestoneMessages[Math.floor(Math.random() * milestoneMessages.length)];
+
+                    return randomMilestone;
                 });
                 
                 const greetingMessage = computed(() => {
@@ -1129,21 +1171,17 @@
                     const today = new Date().toISOString().split('T')[0];
                     let sorted = [...events.value].sort((a, b) => new Date(a.date) - new Date(b.date));
                     
-                    if 
-                        (searchQuery.value) {
+                    if (searchQuery.value) {
                         const query = searchQuery.value.toLowerCase();
                         return sorted.filter(e => 
                             e.title.toLowerCase().includes(query) || 
-               
                             e.artist.toLowerCase().includes(query) || 
                             e.location.toLowerCase().includes(query)
                         ).sort((a, b) => { 
-                            const 
-                                diffA = Math.abs(new Date(a.date) - new Date(today));
+                            const diffA = Math.abs(new Date(a.date) - new Date(today));
                             const diffB = Math.abs(new Date(b.date) - new Date(today));
                             return diffA - diffB;
                         });
-    
                     }
 
                     return viewMode.value === 'upcoming' 
@@ -1600,16 +1638,17 @@
 
                 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
-                    showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, showChangelogModal, calendarEvent, ticketEvent, isEditing, form, importJson, searchQuery,
+                    showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, showChangelogModal, showFandomModal, fandomForm, isFandomEditing, editFandomIndex,
+                    calendarEvent, ticketEvent, isEditing, form, importJson, searchQuery,
                     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, 
               
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
-                    calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, fandoms, newFandomName, newFandomDate, newFandomSticker, newFandomCoverUrl, newFandomMainDate, fandomMessage, calculateFandomDays, fandomMessageStatic,
+                    calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, editFandom, closeFandomModal, openFandomModal, fandoms,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
-                    isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent
+                    isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic
                 };
             }
         }).mount('#app');
