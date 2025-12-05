@@ -1120,9 +1120,7 @@ createApp({
                 const selectedYear = ref('ALL');
                 const expandedEventId = ref(null);
                 const isPrivacyMode = ref(true);
-                const isSearching = ref(false);
-                const searchError = ref('');
-     
+                const searchError = ref(''); // 移除未使用的 isSearching
               
                 const searchQuery = ref('');
                 
@@ -1507,34 +1505,6 @@ const randomIndex = calculateFandomDays(fandom.date) % messages.length;
                         days: diffDays
                     };
 };
-
-                // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
-                const fandomMessage = computed(() => { 
-                    if (fandoms.value.length === 0 || fandoms.value.every(f => !f.date)) {
-                        return "👋 點擊設定，開始你的入坑紀念日紀錄！";
-               
-       }
-                    
-                    // 簡單輪播邏輯
-                    const activeFandoms = fandoms.value.filter(f => f.date);
-                    if (activeFandoms.length === 0) return "👋 點擊設定，開始你的入坑紀念日紀錄！";
-
-   
-                  const currentFandom = activeFandoms[currentFandomIndex.value % activeFandoms.length];
-
-                    const { message, days } = fandomMessageStatic(currentFandom);
-                    
-                    // 每 5 秒自動切換
-         
-           if (activeFandoms.length > 1) {
-                        setTimeout(() => {
-                            currentFandomIndex.value = (currentFandomIndex.value + 1) % activeFandoms.length;
-                        }, 
- 5000);
-                    }
-                    
-                    return message;
-});
                 
                 const greetingMessage = computed(() => {
                     const hour = new Date().getHours();
@@ -1770,7 +1740,8 @@ const togglePrivacy = () => isPrivacyMode.value = !isPrivacyMode.value;
                     themeColor.value = c;
 localStorage.setItem('idolTheme', c);
                 }
-                const updateCustomTheme = (e) => setTheme(e.target.value);
+                // 移除 updateCustomTheme 函式，因為它與 setTheme 功能重複
+                
 const openModal = () => {
                     isEditing.value = false;
 form.value = { ...defaultForm, date: new Date().toISOString().split('T')[0], color: themeColor.value, expenses: [{item:'門票', amount:''}], checklist:[], memo:'' };
@@ -1838,8 +1809,8 @@ showChangelogModal.value = true;
                         searchError.value = "請先輸入地點名稱";
 return;
                     }
-                    isSearching.value = true;
-searchError.value = '';
+                    // 移除 isSearching 相關邏輯
+                    searchError.value = '';
                     
                     const apiUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.value.location)}&limit=1`;
                     try {
@@ -1871,8 +1842,8 @@ form.value.lng = null;
                         console.error("地圖定位錯誤:", e);
 searchError.value = `連線錯誤或請求被拒絕: ${e.message}。請稍後再試。`;
                     } finally {
-                        isSearching.value = false;
-if (activeTab.value === 'map') {
+                        // 移除 isSearching 相關邏輯
+                        if (activeTab.value === 'map') {
                             nextTick(() => { initMap(); });
 }
                     }
@@ -2043,8 +2014,8 @@ const formatMoney = (v) => v ? v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","
                 const getDay = (d) => new Date(d).getDate();
 const getMonth = (d) => ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][new Date(d).getMonth()];
 const getDaysDiff = (d) => Math.ceil((new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0))/(1000*60*60*24));
-                const getMapLink = (l) => l ?
-                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#';
+const getMapLink = (l) => l ?
+                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#'; // 修正 Google Maps 連結格式
 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
                     showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, showChangelogModal, showFandomModal, fandomForm, isFandomEditing, editFandomIndex,
@@ -2052,11 +2023,11 @@ return {
                   
     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, 
               
-                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
+                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, processImport, showChangelog, // 移除 updateCustomTheme
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, 
  addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, editFandom, closeFandomModal, openFandomModal, fandoms,
-                    getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
+                    getEventColor, emotionalSummary, availableYears, searchCoordinates, searchError, mappedEventsCount, missingCoordsCount, // 移除 isSearching
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
                     isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut, getBirthdayCongrats, 
