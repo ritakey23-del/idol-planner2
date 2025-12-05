@@ -423,7 +423,7 @@
             </div>
 
             <div v-if="activeTab === 'fandom'" class="space-y-6 p-5 pb-32">
-                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-heart-straight-fill text-red-500"></i> 追星紀念日 💖</h2>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-heart-straight-fill text-red-500"></i> 入坑紀念日 💖</h2>
                 
                 <div v-if="fandoms.length > 0" class="space-y-4">
                     <div v-for="(fan, index) in fandoms" :key="index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
@@ -435,26 +435,28 @@
                             <button @click="removeFandom(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-trash text-lg"></i></button>
                         </div>
                         <div class="text-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <div class="text-sm font-medium text-slate-600 mb-1">
+                                {{ fandomMessageStatic(fan) }}
+                            </div>
                             <div class="text-3xl font-extrabold" :style="{ color: themeColor }">{{ calculateFandomDays(fan.date) }}</div>
-                            <div class="text-sm text-slate-600 mt-1">追星天數</div>
                         </div>
                     </div>
                 </div>
                 <div v-else class="text-center py-12 px-4 opacity-80 flex flex-col items-center">
                     <i class="ph ph-heart-break text-5xl text-slate-300 mb-4"></i>
-                    <p class="text-slate-600 font-bold text-lg mb-2">還沒有紀錄任何紀念日</p>
+                    <p class="text-slate-600 font-bold text-lg mb-2">還沒有紀錄任何入坑日</p>
                     <p class="text-sm text-slate-400">快來記錄你與偶像相遇的日子吧！</p>
                 </div>
 
                 <hr class="border-slate-100 my-4">
 
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-3">新增紀念日</h3>
+                    <h3 class="font-bold text-slate-800 mb-3">新增入坑日</h3>
                     <div class="space-y-3">
                         <input type="text" v-model="newFandomName" placeholder="偶像名稱" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="date" v-model="newFandomDate" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
+                        <input type="date" v-model="newFandomDate" placeholder="請選擇入坑日期" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
                         <button @click="addFandom" class="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold active:scale-95 transition-transform shadow-md" :style="{ backgroundColor: themeColor }">
-                            + 新增紀念日
+                            + 新增入坑日
                         </button>
                     </div>
                 </div>
@@ -463,7 +465,7 @@
             <div v-show="activeTab === 'map'" class="w-full 
  h-full relative">
                 <div id="map-container" class="w-full h-full bg-slate-200"></div>
-                <div class="absolute top-4 left-4 right-4 z-[400] bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-slate-100">
+                <div class="absolute top-4 left-4 right-4 z-30 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-slate-100">
                     <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-map-trifold text-primary"></i> 追星足跡</h3>
                     <p class="text-xs 
  text-slate-500 mt-1">已解鎖 {{ mappedEventsCount }} 個地點 <span v-if="missingCoordsCount > 0" class="text-orange-500 ml-1">({{ missingCoordsCount }} 個待定位)</span></p>
@@ -556,8 +558,8 @@
         </main>
 
         <button @click="openModal()" :style="{ backgroundColor: themeColor }"
-            class="absolute bottom-24 right-6 
- w-14 h-14 text-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center transform transition-transform hover:scale-110 active:scale-95 z-30 mb-safe">
+            class="absolute bottom-24 right-6 w-14 h-14 text-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center transform transition-transform hover:scale-110 active:scale-95 z-30 mb-safe"
+            v-if="activeTab === 'home'">
             <i class="ph ph-plus text-2xl font-bold"></i>
         </button>
 
@@ -630,7 +632,7 @@
                                 <div class="text-right">
                               
         <div class="text-[10px] text-slate-400 uppercase">TICKET PRICE</div>
-                                    <div class="font-bold">${{ formatMoney(getTicketPrice(ticketEvent.expenses)) }}</div>
+                                    <div class="font-bold">${{ formatMoney(getTicketEvent.expenses)) }}</div>
                                 </div>
                    
           </div>
@@ -700,9 +702,10 @@
                 
                 <div class="mb-6 border-b border-slate-100 pb-4">
                     <p class="text-xs font-medium text-slate-500 mb-2">App 標題</p>
-                    <input type="text" v-model="customTitle" @change="updateAppTitle" placeholder="例如：我的追星天堂"
+                    <input type="text" v-model="customTitle" @change="updateAppTitle" placeholder="追星日記 ✨"
                            class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-primary/50 focus:border-primary/50">
                 </div>
+                
                 
                 <div class="mb-6">
                     <p class="text-xs text-slate-400 mb-2">全域主題色</p>
@@ -725,11 +728,10 @@
              
                 <hr class="border-slate-100 my-4">
 
-                <div class="mt-4 border-t border-slate-100 pt-4 text-xs text-slate-400 text-left">
-                    <p class="font-bold text-slate-600 mb-1">App 版本資訊</p>
-                    <p>當前版本: <span class="font-mono text-slate-800">{{ appVersion }}</span></p>
+                <div class="mt-4 border-t border-slate-100 pt-4 text-xs text-slate-400 text-center">
+                    <p class="inline-block mr-4">當前版本: <span class="font-mono text-slate-800">{{ appVersion }}</span></p>
                     <button @click="showChangelog" 
-                        class="text-primary hover:underline mt-1 block font-medium text-xs text-left cursor-pointer"
+                        class="text-primary hover:underline font-medium text-xs cursor-pointer"
                         :style="{ color: themeColor }">
                         📄 查看更新日誌
                     </button>
@@ -749,12 +751,12 @@
  '編輯行程' : '新增行程' }}</h2>
                         <button @click="closeModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
                     </div>
-                    <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32">
+                    <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32 pt-4">
                     
       <div class="space-y-4">
                             <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
-                             <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片連結 (URL)</label><div class="relative"><i class="ph ph-image absolute left-3 top-3.5 text-slate-400"></i><input v-model="form.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none 
- rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div><p class="text-[10px] text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，豐富你的行程卡片！</p></div>
+                             <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片連結 (URL)</label><div class="relative flex-1"><i class="ph ph-image absolute left-3 top-3.5 text-slate-400"></i><input v-model="form.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none 
+ rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800"></div><p class="text-xs text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，豐富你的行程卡片！</p></div>
 
                             <div class="grid grid-cols-[1fr,60px] gap-3">
                                 <div><label class="block text-sm font-medium text-slate-500 mb-1">歌手/團體</label><input v-model="form.artist" type="text" placeholder="例如: Taylor Swift" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
@@ -914,8 +916,11 @@
                 };
 
                 const removeFandom = (index) => {
-                    fandoms.value.splice(index, 1);
-                    saveFandoms();
+                    // 新增確認提示
+                    if (confirm('確定要刪除這個入坑紀念日嗎？此操作無法恢復。')) {
+                        fandoms.value.splice(index, 1);
+                        saveFandoms();
+                    }
                 };
 
                 onMounted(() => {
@@ -994,19 +999,34 @@
                 const isThemeColorLight = computed(() => isColorLight(themeColor.value));
                 const headerTextColor = computed(() => isThemeColorLight.value ? 'text-slate-800' : 'text-white');
                 
-                // Fandom Message Logic
+                // NEW: Fandom Days Calculator (天數 +1)
                 const calculateFandomDays = (dateStr) => {
                     if (!dateStr) return 0;
                     const start = new Date(dateStr);
                     const today = new Date();
                     const diffTime = today.getTime() - start.getTime();
-                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    // 加 1 是為了包含入坑當天
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
                     return diffDays > 0 ? diffDays : 0;
                 };
 
+                // NEW: Static Fandom Message for List
+                const fandomMessageStatic = (fandom) => {
+                    const diffDays = calculateFandomDays(fandom.date);
+                    const name = fandom.name;
+                    const messages = [
+                        `🎉 恭喜！這是你追隨 ${name} 的第 ${diffDays} 天！`,
+                        `你對 ${name} 的愛意，已累積到第 ${diffDays} 個日子了！💖`,
+                        `與 ${name} 相遇的感動，已持續 ${diffDays} 天！✨`,
+                        `愛你無悔，你已經為 ${name} 應援 ${diffDays} 天！💪`,
+                    ];
+                    return messages[diffDays % messages.length];
+                };
+
+                // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
                 const fandomMessage = computed(() => { 
                     if (fandoms.value.length === 0) {
-                        return "👋 點擊設定，開始你的追星紀念日紀錄！";
+                        return "👋 點擊設定，開始你的入坑紀念日紀錄！";
                     }
                     
                     // 簡單輪播邏輯
@@ -1169,7 +1189,7 @@
                     const pools = {
                         high_freq: [ 
                             `哇！這一年你為了見${mainArtist}真的拚盡全力了！🔥 熱情值已達最高點！`, 
-                            `你的足跡踏遍了各個場館，是名副其實的追星模範生！🏆 你的愛意無可取代！`, 
+                            `你的足跡踏遍了各個場館，是名符其實的追星模範生！🏆 你的愛意無可取代！`, 
        
                             "體力好、熱情足，這一年你過得比誰都充實！✨ 充滿了心動與閃耀瞬間。", 
                             `見面次數多到連${mainArtist}都快認得你了吧？😂 你就是最忠實的靈魂伴侶。`, 
@@ -1295,7 +1315,8 @@
                 };
 
                 const deleteEvent = (id) => {
-                    if(confirm('確定要刪除嗎？')) {
+                    // 修正: 行程刪除提示
+                    if (confirm('確定要刪除此行程嗎？此操作無法恢復。')) {
                         events.value = events.value.filter(e => e.id !== id);
                         if(expandedEventId.value === id) expandedEventId.value = null;
                     }
@@ -1535,7 +1556,7 @@
               
                     openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
-                    calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, fandoms, newFandomName, newFandomDate, fandomMessage, calculateFandomDays,
+                    calculateTotal, addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, fandoms, newFandomName, newFandomDate, fandomMessage, calculateFandomDays, fandomMessageStatic,
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
