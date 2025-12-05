@@ -423,15 +423,21 @@
             </div>
 
             <div v-if="activeTab === 'fandom'" class="space-y-6 p-5 pb-32">
-                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-heart-straight-fill text-red-500"></i> 入坑紀念日 💖</h2>
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-heart-straight-fill text-red-500"></i> 入坑紀念日 💖</h2>
+                    <button @click="openFandomModal()" class="bg-white border-2 border-slate-200 px-4 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform text-sm flex items-center gap-1 text-slate-600">
+                        <i class="ph ph-plus-circle text-lg"></i>
+                        <span>新增入坑日</span>
+                    </button>
+                </div>
                 
                 <div v-if="fandoms.length > 0" class="space-y-4">
                     <div v-for="(fan, index) in fandoms" :key="index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                         
                         <div class="relative overflow-hidden rounded-xl border border-slate-100 shadow-sm">
                             <div v-if="fan.coverUrl" class="h-32 w-full bg-slate-100 relative overflow-hidden">
-                                <img :src="fan.coverUrl" class="w-full h-full object-cover opacity-70 mix-blend-multiply" alt="Fandom Cover">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                                <img :src="fan.coverUrl" class="w-full h-full object-cover opacity-95" alt="Fandom Cover" onerror="this.style.display='none'">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                             </div>
                             <div class="p-4" :class="{'bg-slate-50': !fan.coverUrl}">
                                 <div class="flex justify-between items-start">
@@ -444,10 +450,9 @@
                                         <button @click="removeFandom(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-trash text-lg"></i></button>
                                     </div>
                                 </div>
+                                <p class="text-xs text-slate-500 mt-1">入坑日: {{ fan.date }}</p>
                                 
                                 <div class="text-center mt-4 p-3 rounded-lg border border-dashed border-slate-200 bg-white shadow-inner">
-                                    <p class="text-sm font-medium text-slate-600 mb-2">入坑日: {{ fan.date }}</p>
-
                                     <div class="text-sm font-medium text-slate-600 mb-1">
                                         {{ fandomMessageStatic(fan).message.split(fandomMessageStatic(fan).days)[0] }}
                                         <span class="text-3xl font-extrabold" :style="{ color: themeColor }">{{ calculateFandomDays(fan.date) }}</span>
@@ -636,7 +641,7 @@
                     <div class="ticket-stub bg-white rounded-3xl overflow-hidden relative text-slate-800">
                         <div class="h-20 relative flex items-center justify-center" :style="{ backgroundColor: getEventColor(ticketEvent) }">
       
-                         <img v-if="ticketEvent.coverUrl" :src="ticketEvent.coverUrl" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay">
+                         <img v-if="ticketEvent.coverUrl" :src="ticketEvent.coverUrl" class="absolute inset-0 w-full h-full object-cover opacity-95 mix-blend-overlay">
                          <h2 :class="isColorLight(getEventColor(ticketEvent)) ? 'text-slate-800' : 'text-white'" 
                              class="font-bold text-xl relative z-10 drop-shadow-md">{{ ticketEvent.artist }}</h2>
                         </div>
@@ -776,6 +781,46 @@
            <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
         </div>
+        
+        <transition name="slide-up">
+            <div v-if="showFandomModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeFandomModal"></div>
+                <div class="bg-white w-full max-w-md 
+ max-h-[90vh] sm:rounded-2xl rounded-t-3xl p-6 relative flex flex-col shadow-2xl overflow-hidden h-auto mb-safe">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h2 class="text-xl font-bold text-slate-800">{{ isFandomEditing ?
+ '編輯入坑日' : '新增入坑日' }}</h2>
+                        <button @click="closeFandomModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32 pt-4">
+                    
+      <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">偶像名稱 <span class="text-red-500">*</span></label><input v-model="fandomForm.name" type="text" placeholder="例如: BLACKPINK" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                            
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">入坑日期 <span class="text-red-500">*</span></label><input v-model="fandomForm.date" type="text" placeholder="YYYY-MM-DD (例如: 2019-08-08)" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                            
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">代表貼紙 (Emoji)</label><input v-model="fandomForm.sticker" type="text" placeholder="輸入一個 Emoji (例如: ✨)" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
+
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 URL (選填)</label><input v-model="fandomForm.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
+                                <p class="text-xs text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，豐富你的卡片！</p>
+                            </div>
+                            
+                            <hr class="border-slate-100 my-2">
+
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">生日 (YYYY-MM-DD, 選填)</label><input v-model="fandomForm.birthday" type="text" placeholder="例如: 1997-03-27" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+                            
+                            <div><label class="block text-sm font-medium text-slate-500 mb-1">出道日 (YYYY-MM-DD, 選填)</label><input v-model="fandomForm.debutDate" type="text" placeholder="例如: 2016-08-08" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
+
+                        </div>
+          
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
+                        <button @click="addFandom" :style="{ backgroundColor: themeColor }" class="w-full text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
 
         <transition name="slide-up">
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -902,13 +947,13 @@
                 const showTicketModal = ref(false);
                 const showCalendarModal = ref(false); 
                 const showChangelogModal = ref(false);
-                const showFandomModal = ref(false); // NEW FANDOM MODAL STATE
+                const showFandomModal = ref(false); 
                 const calendarEvent = ref(null);     
   
                 const ticketEvent = ref({}); 
                 const isEditing = ref(false);
-                const isFandomEditing = ref(false); // NEW FANDOM EDITING STATE
-                const editFandomIndex = ref(null); // NEW FANDOM EDIT INDEX
+                const isFandomEditing = ref(false); 
+                const editFandomIndex = ref(null); 
                 const importJson = ref('');
                 let map = null;
                 let markers = [];
@@ -967,16 +1012,31 @@
                     fandomForm.value = {...defaultFandomForm};
                 };
 
+                const validateDate = (dateString) => {
+                    if (!dateString) return true; // Allow empty date for optional fields
+                    // Basic YYYY-MM-DD validation
+                    const regex = /^\d{4}-\d{2}-\d{2}$/;
+                    if (!regex.test(dateString)) return false;
+                    
+                    const date = new Date(dateString);
+                    return date instanceof Date && !isNaN(date);
+                };
 
                 const addFandom = () => {
-                    if (!fandomForm.value.name.trim() || !fandomForm.value.date) {
-                        return alert('請填寫偶像名稱和入坑日期！');
+                    if (!fandomForm.value.name.trim()) {
+                        return alert('錯誤：偶像名稱不能為空！');
                     }
-                    
+                    if (!fandomForm.value.date) {
+                         return alert('錯誤：入坑日期不能為空！');
+                    }
+                    if (!validateDate(fandomForm.value.date) || (fandomForm.value.birthday && !validateDate(fandomForm.value.birthday)) || (fandomForm.value.debutDate && !validateDate(fandomForm.value.debutDate))) {
+                        return alert('錯誤：日期格式無效！請使用 YYYY-MM-DD 格式，例如 2019-08-08。');
+                    }
+
                     if(isFandomEditing.value && editFandomIndex.value !== null) {
-                        fandoms.value[editFandomIndex.value] = {...fandomForm.value};
+                        fandoms.value[editFandomIndex.value] = JSON.parse(JSON.stringify(fandomForm.value));
                     } else {
-                        fandoms.value.push({...fandomForm.value});
+                        fandoms.value.push(JSON.parse(JSON.stringify(fandomForm.value)));
                     }
                     saveFandoms();
                     closeFandomModal();
@@ -1082,7 +1142,7 @@
                     const diffDays = calculateFandomDays(fandom.date);
                     const name = fandom.name;
                     const messages = [
-                        `我們的故事已寫下 [DAYS] 天的章節！💫`,
+                        `🎉 恭喜！這是你追隨 ${name} 的第 [DAYS] 天！`,
                         `${name} 陪你走過 [DAYS] 個閃耀的日子！🌟`,
                         `💖 追隨 ${name} 的腳步，堅持了 [DAYS] 天，你超棒！`,
                         `恭喜！你與 ${name} 的愛意已經累積到第 [DAYS] 個日子囉！🥰`,
@@ -1101,7 +1161,7 @@
                         `還記得嗎？當初遇見 ${name} 的第 [DAYS] 天！回憶殺！🥲`,
                         `讓 ${name} 的音樂充滿你的生活，已經 [DAYS] 天的幸福！🎧`,
                         `你已經是 ${name} 重要的支柱，這是你們的第 [DAYS] 天紀念！💪`,
-                        `你將 ${name} 刻在了生命中，這 ${diffDays} 天的努力沒有白費！💎`,
+                        `你將 ${name} 刻在了生命中，這 [DAYS] 天的努力沒有白費！💎`,
                     ];
                     
                     const randomIndex = calculateFandomDays(fandom.date) % messages.length;
@@ -1116,34 +1176,26 @@
 
                 // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
                 const fandomMessage = computed(() => { 
-                    if (fandoms.value.length === 0) {
+                    if (fandoms.value.length === 0 || fandoms.value.every(f => !f.date)) {
                         return "👋 點擊設定，開始你的入坑紀念日紀錄！";
                     }
                     
                     // 簡單輪播邏輯
-                    const currentFandom = fandoms.value[currentFandomIndex.value];
-                    if (!currentFandom) return "";
+                    const activeFandoms = fandoms.value.filter(f => f.date);
+                    if (activeFandoms.length === 0) return "👋 點擊設定，開始你的入坑紀念日紀錄！";
 
-                    const diffDays = calculateFandomDays(currentFandom.date);
+                    const currentFandom = activeFandoms[currentFandomIndex.value % activeFandoms.length];
+
+                    const { message, days } = fandomMessageStatic(currentFandom);
                     
                     // 每 5 秒自動切換
-                    setTimeout(() => {
-                        currentFandomIndex.value = (currentFandomIndex.value + 1) % fandoms.value.length;
-                    }, 5000);
+                    if (activeFandoms.length > 1) {
+                        setTimeout(() => {
+                            currentFandomIndex.value = (currentFandomIndex.value + 1) % activeFandoms.length;
+                        }, 5000);
+                    }
                     
-                    // 情緒價值邏輯
-                    const milestoneMessages = [
-                        `我們的故事已寫下 ${diffDays} 天的章節！💫`,
-                        `${currentFandom.name} 陪你走過 ${diffDays} 個閃耀的日子！🌟`,
-                        `💖 追隨 ${currentFandom.name} 的腳步，堅持了 ${diffDays} 天，你超棒！`,
-                        `恭喜！你與 ${currentFandom.name} 的愛意已經累積 ${diffDays} 天囉！🥰`,
-                        `時間證明了愛意！你已經為 ${currentFandom.name} 應援 ${diffDays} 天！💪`,
-                        `無論晴雨，你對 ${currentFandom.name} 的熱愛已經持續 ${diffDays} 天！☀️`,
-                    ];
-                    
-                    const randomMilestone = milestoneMessages[Math.floor(Math.random() * milestoneMessages.length)];
-
-                    return randomMilestone;
+                    return message;
                 });
                 
                 const greetingMessage = computed(() => {
