@@ -425,7 +425,7 @@
             <div v-if="activeTab === 'fandom'" class="space-y-6 p-5 pb-32">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-heart-straight-fill text-red-500"></i> 入坑紀念日 💖</h2>
-                    <button @click="openFandomModal()" class="bg-white border-2 border-slate-200 px-4 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform text-sm flex items-center gap-1 text-slate-600">
+                    <button @click="openFandomModal" class="bg-white border-2 border-slate-200 px-4 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform text-sm flex items-center gap-1 text-slate-600">
                         <i class="ph ph-plus-circle text-lg"></i>
                         <span>新增入坑日</span>
                     </button>
@@ -464,12 +464,12 @@
                                     <div v-if="fan.birthday" class="text-xs text-slate-600 flex items-center justify-center gap-1">
                                         <i class="ph ph-cake text-sm text-pink-500"></i>
                                         距離生日還有 
-                                        <span class="font-bold text-pink-500">{{ calculateFandomDays(fan.birthday) }} 天</span>
+                                        <span class="font-bold text-pink-500">{{ calculateDaysToNextDate(fan.birthday) }} 天</span>
                                     </div>
                                     <div v-if="fan.debutDate" class="text-xs text-slate-600 flex items-center justify-center gap-1">
                                         <i class="ph ph-microphone-stage text-sm text-indigo-500"></i>
-                                        距離出道日還有 
-                                        <span class="font-bold text-indigo-500">{{ calculateFandomDays(fan.debutDate) }} 天</span>
+                                        出道第 
+                                        <span class="font-bold text-indigo-500">{{ calculateYearsAndDaysSinceDebut(fan.debutDate) }}</span>
                                     </div>
                                 </div>
                                 
@@ -482,24 +482,6 @@
                     <i class="ph ph-heart-break text-5xl text-slate-300 mb-2"></i>
                     <p class="text-slate-600 font-bold text-lg mb-2">還沒有紀錄任何入坑日</p>
                     <p class="text-sm text-slate-400 mb-4">快來記錄你與偶像相遇的日子吧！</p>
-                </div>
-
-                <hr class="border-slate-100 my-4">
-
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-3">新增入坑日</h3>
-                    <div class="space-y-3">
-                        <input type="text" v-model="newFandomName" placeholder="偶像名稱" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="text" v-model="newFandomDate" placeholder="入坑日期 (YYYY-MM-DD)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="text" v-model="newFandomSticker" placeholder="代表 Emoji (例如: ✨)" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="text" v-model="newFandomCoverUrl" placeholder="封面圖片 URL (選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="text" v-model="newFandomBirthday" placeholder="生日 (YYYY-MM-DD, 選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        <input type="text" v-model="newFandomDebutDate" placeholder="出道日 (YYYY-MM-DD, 選填)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm text-slate-800">
-                        
-                        <button @click="addFandom" class="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold active:scale-95 transition-transform shadow-md" :style="{ backgroundColor: themeColor }">
-                            + 新增入坑日
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -641,7 +623,7 @@
                     <div class="ticket-stub bg-white rounded-3xl overflow-hidden relative text-slate-800">
                         <div class="h-20 relative flex items-center justify-center" :style="{ backgroundColor: getEventColor(ticketEvent) }">
       
-                         <img v-if="ticketEvent.coverUrl" :src="ticketEvent.coverUrl" class="absolute inset-0 w-full h-full object-cover opacity-95 mix-blend-overlay">
+                         <img v-if="ticketEvent.coverUrl" :src="ticketEvent.coverUrl" class="absolute inset-0 w-full h-full object-cover opacity-95" alt="Event Cover" onerror="this.style.display='none'">
                          <h2 :class="isColorLight(getEventColor(ticketEvent)) ? 'text-slate-800' : 'text-white'" 
                              class="font-bold text-xl relative z-10 drop-shadow-md">{{ ticketEvent.artist }}</h2>
                         </div>
@@ -781,46 +763,6 @@
            <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
         </div>
-        
-        <transition name="slide-up">
-            <div v-if="showFandomModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeFandomModal"></div>
-                <div class="bg-white w-full max-w-md 
- max-h-[90vh] sm:rounded-2xl rounded-t-3xl p-6 relative flex flex-col shadow-2xl overflow-hidden h-auto mb-safe">
-                    <div class="flex justify-between items-center mb-4 shrink-0">
-                        <h2 class="text-xl font-bold text-slate-800">{{ isFandomEditing ?
- '編輯入坑日' : '新增入坑日' }}</h2>
-                        <button @click="closeFandomModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
-                    </div>
-                    <div class="overflow-y-auto flex-1 no-scrollbar space-y-4 pb-32 pt-4">
-                    
-      <div class="space-y-4">
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">偶像名稱 <span class="text-red-500">*</span></label><input v-model="fandomForm.name" type="text" placeholder="例如: BLACKPINK" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
-                            
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">入坑日期 <span class="text-red-500">*</span></label><input v-model="fandomForm.date" type="text" placeholder="YYYY-MM-DD (例如: 2019-08-08)" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
-                            
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">代表貼紙 (Emoji)</label><input v-model="fandomForm.sticker" type="text" placeholder="輸入一個 Emoji (例如: ✨)" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
-
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 URL (選填)</label><input v-model="fandomForm.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                                <p class="text-xs text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，豐富你的卡片！</p>
-                            </div>
-                            
-                            <hr class="border-slate-100 my-2">
-
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">生日 (YYYY-MM-DD, 選填)</label><input v-model="fandomForm.birthday" type="text" placeholder="例如: 1997-03-27" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
-                            
-                            <div><label class="block text-sm font-medium text-slate-500 mb-1">出道日 (YYYY-MM-DD, 選填)</label><input v-model="fandomForm.debutDate" type="text" placeholder="例如: 2016-08-08" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
-
-                        </div>
-          
-                    </div>
-                    <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
-                        <button @click="addFandom" :style="{ backgroundColor: themeColor }" class="w-full text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform">儲存</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
 
         <transition name="slide-up">
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -1016,7 +958,15 @@
                     if (!dateString) return true; // Allow empty date for optional fields
                     // Basic YYYY-MM-DD validation
                     const regex = /^\d{4}-\d{2}-\d{2}$/;
-                    if (!regex.test(dateString)) return false;
+                    if (!regex.test(dateString)) {
+                        // 嘗試修復 YYYYMMDD 格式
+                        if (/^\d{8}$/.test(dateString)) {
+                            const fixedDate = `${dateString.substring(0, 4)}-${dateString.substring(4, 6)}-${dateString.substring(6, 8)}`;
+                            const date = new Date(fixedDate);
+                            return date instanceof Date && !isNaN(date);
+                        }
+                        return false;
+                    }
                     
                     const date = new Date(dateString);
                     return date instanceof Date && !isNaN(date);
@@ -1029,8 +979,16 @@
                     if (!fandomForm.value.date) {
                          return alert('錯誤：入坑日期不能為空！');
                     }
-                    if (!validateDate(fandomForm.value.date) || (fandomForm.value.birthday && !validateDate(fandomForm.value.birthday)) || (fandomForm.value.debutDate && !validateDate(fandomForm.value.debutDate))) {
-                        return alert('錯誤：日期格式無效！請使用 YYYY-MM-DD 格式，例如 2019-08-08。');
+
+                    // 日期格式檢查
+                    if (!validateDate(fandomForm.value.date)) {
+                        return alert('錯誤：入坑日期格式無效！請使用 YYYY-MM-DD 格式。');
+                    }
+                    if (fandomForm.value.birthday && !validateDate(fandomForm.value.birthday)) {
+                        return alert('錯誤：生日日期格式無效！請使用 YYYY-MM-DD 格式。');
+                    }
+                    if (fandomForm.value.debutDate && !validateDate(fandomForm.value.debutDate)) {
+                        return alert('錯誤：出道日期格式無效！請使用 YYYY-MM-DD 格式。');
                     }
 
                     if(isFandomEditing.value && editFandomIndex.value !== null) {
@@ -1128,7 +1086,7 @@
                 
                 // NEW: Fandom Days Calculator (天數 +1)
                 const calculateFandomDays = (dateStr) => {
-                    if (!dateStr) return 0;
+                    if (!dateStr || !validateDate(dateStr)) return 0;
                     const start = new Date(dateStr);
                     const today = new Date();
                     const diffTime = today.getTime() - start.getTime();
@@ -1136,6 +1094,58 @@
                     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
                     return diffDays > 0 ? diffDays : 0;
                 };
+                
+                // NEW: Days to Next Important Date
+                const calculateDaysToNextDate = (dateStr) => {
+                    if (!dateStr || !validateDate(dateStr)) return 'N/A';
+                    
+                    // 假設日期為 YYYY-MM-DD
+                    const [year, month, day] = dateStr.split('-').map(Number);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    // 創建當年份的目標日期
+                    let nextDate = new Date(today.getFullYear(), month - 1, day);
+                    
+                    // 如果今年的日期已過，則使用下一年的日期
+                    if (nextDate.getTime() < today.getTime()) {
+                        nextDate.setFullYear(today.getFullYear() + 1);
+                    }
+                    
+                    const diffTime = nextDate.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays;
+                };
+
+                // NEW: Years and Days Since Debut
+                const calculateYearsAndDaysSinceDebut = (dateStr) => {
+                    if (!dateStr || !validateDate(dateStr)) return 'N/A';
+                    
+                    const debut = new Date(dateStr);
+                    const today = new Date();
+
+                    let years = today.getFullYear() - debut.getFullYear();
+                    
+                    // 檢查是否已過生日/出道日
+                    const hasPassed = (today.getMonth() > debut.getMonth() || (today.getMonth() === debut.getMonth() && today.getDate() >= debut.getDate()));
+
+                    if (!hasPassed) {
+                        years--;
+                    }
+                    
+                    let lastAnniversary = new Date(today.getFullYear(), debut.getMonth(), debut.getDate());
+                    if (lastAnniversary.getTime() > today.getTime()) {
+                        lastAnniversary.setFullYear(today.getFullYear() - 1);
+                    }
+
+                    const days = Math.floor((today.getTime() - lastAnniversary.getTime()) / (1000 * 60 * 60 * 24));
+
+                    if (years < 0) return '尚未出道';
+                    if (years === 0) return `第 ${days} 天`;
+                    
+                    return `${years} 年又 ${days} 天`;
+                };
+
 
                 // NEW: Static Fandom Message for List
                 const fandomMessageStatic = (fandom) => {
@@ -1342,7 +1352,6 @@
                             "投資在快樂上，是世界上最划算的交易！📈 幸福感已爆表！", 
                             "雖然錢包瘦了，但心靈超級富足啊！🥰 每一分錢都買到了無價的回憶！", 
                             "努力工作就是為了這一刻，你值得擁有這些美好！💪 你是我們的驕傲！", 
-                 
                             "這筆支出叫做「精神糧食費」，一點都不貴！🍚 感受愛是無上限的！", 
                             "所謂的財富自由，就是能隨心所欲地去見想見的人！💰 你的行動力讓人驚嘆！" 
                         ],
@@ -1700,7 +1709,7 @@
                     getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
-                    isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic
+                    isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut
                 };
             }
         }).mount('#app');
