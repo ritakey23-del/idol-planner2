@@ -436,22 +436,25 @@
                         
                         <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
                             
-                            <div v-if="fan.coverUrl" class="w-full h-40 md:w-1/3 md:h-auto shrink-0 relative overflow-hidden bg-slate-100">
-                                <img :src="fan.coverUrl" class="w-full h-full object-cover" alt="Fandom Cover" onerror="this.style.display='none'">
+                            <div class="w-full h-40 md:w-1/3 md:h-auto shrink-0 relative overflow-hidden bg-slate-100">
+                                <img v-if="fan.coverUrl" :src="fan.coverUrl" class="w-full h-full object-cover" alt="Fandom Cover" onerror="this.style.display='none'">
+                                
+                                <div class="absolute inset-0 p-3 flex flex-col justify-end">
+                                    <h3 class="text-xl font-bold text-white drop-shadow-lg flex items-center gap-1">
+                                        <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
+                                        {{ fan.name }}
+                                    </h3>
+                                </div>
                             </div>
 
                             <div class="p-4 flex-1">
                                 <div class="flex justify-between items-start">
-                                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                        <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
-                                        {{ fan.name }}
-                                    </h3>
-                                    <div class="flex gap-2">
+                                    <p class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
+                                    <div class="flex gap-2 shrink-0">
                                         <button @click="editFandom(fan, index)" class="text-slate-400 hover:text-blue-500 p-1"><i class="ph ph-pencil-simple text-lg"></i></button>
                                         <button @click="removeFandom(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-trash text-lg"></i></button>
                                     </div>
                                 </div>
-                                <p class="text-xs text-slate-500 mt-1">入坑日: {{ fan.date }}</p>
                                 
                                 <div class="text-center mt-4 p-3 rounded-lg border border-dashed border-slate-200 bg-white shadow-inner">
                                     <div class="text-sm font-medium text-slate-600 mb-1">
@@ -465,13 +468,23 @@
                                 <div class="mt-3 space-y-1">
                                     <div v-if="fan.birthday && calculateDaysToNextDate(fan.birthday) !== 'N/A'" class="text-xs text-slate-600 flex items-center justify-center gap-1">
                                         <i class="ph ph-cake text-sm text-pink-500"></i>
-                                        距離生日還有 
-                                        <span class="font-bold text-pink-500">{{ calculateDaysToNextDate(fan.birthday) }} 天</span>
+                                        <template v-if="calculateDaysToNextDate(fan.birthday) === 0">
+                                            <span class="font-bold text-pink-500">{{ getBirthdayCongrats(fan.name) }}</span>
+                                        </template>
+                                        <template v-else>
+                                            距離生日還有 
+                                            <span class="font-bold text-pink-500">{{ calculateDaysToNextDate(fan.birthday) }} 天</span>
+                                        </template>
                                     </div>
                                     <div v-if="fan.debutDate && calculateYearsAndDaysSinceDebut(fan.debutDate) !== 'N/A'" class="text-xs text-slate-600 flex items-center justify-center gap-1">
                                         <i class="ph ph-microphone-stage text-sm text-indigo-500"></i>
-                                        出道第 
-                                        <span class="font-bold text-indigo-500">{{ calculateYearsAndDaysSinceDebut(fan.debutDate) }}</span>
+                                        <template v-if="calculateDaysToNextDate(fan.debutDate) === 0">
+                                            <span class="font-bold text-indigo-500">{{ getDebutCongrats(fan.name) }}</span>
+                                        </template>
+                                        <template v-else>
+                                            出道第 
+                                            <span class="font-bold text-indigo-500">{{ calculateYearsAndDaysSinceDebut(fan.debutDate) }}</span>
+                                        </template>
                                     </div>
                                 </div>
                                 
@@ -1137,16 +1150,18 @@
                     return diffDays > 0 ? diffDays : 0;
                 };
 
-                // NEW: Days to Next Important Date
+                // NEW: Days to Next Important Date (修正：計算距離下一個生日還剩多少天)
                 const calculateDaysToNextDate = (dateStr) => {
                     if (!dateStr || !validateDate(dateStr)) return 'N/A';
                     
+                    // 假設日期為 YYYY-MM-DD
                     const [year, month, day] = dateStr.split('-').map(Number);
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
                     // 創建當年份的目標日期
                     let nextDate = new Date(today.getFullYear(), month - 1, day);
+                    nextDate.setHours(0, 0, 0, 0);
                     
                     // 如果今年的日期已過，則使用下一年的日期
                     if (nextDate.getTime() < today.getTime()) {
@@ -1155,6 +1170,8 @@
                     
                     const diffTime = nextDate.getTime() - today.getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 0) return 0; // 當天
                     return diffDays;
                 };
 
@@ -1167,7 +1184,7 @@
 
                     let years = today.getFullYear() - debut.getFullYear();
                     
-                    // 檢查是否已過生日/出道日
+                    // 檢查是否已過當年的紀念日
                     const hasPassed = (today.getMonth() > debut.getMonth() || (today.getMonth() === debut.getMonth() && today.getDate() >= debut.getDate()));
 
                     if (!hasPassed) {
@@ -1185,6 +1202,63 @@
                     if (years === 0) return `第 ${days} 天`;
                     
                     return `${years} 年又 ${days} 天`;
+                };
+                
+                // NEW: Congrats Messages (20+ each)
+                const getBirthdayCongrats = (name) => {
+                    const messages = [
+                        `🎂 今天是 ${name} 的生日！願你比誰都幸福！✨`,
+                        `🌟 Happy Birthday, ${name}！你是最閃亮的星！💖`,
+                        `🎉 ${name} 生日快樂！謝謝你的降臨，帶來了光芒！☀️`,
+                        `💖 今天的蛋糕和蠟燭都為 ${name} 而點燃！永遠愛你！🔥`,
+                        `🎁 專屬 ${name} 的日子！願你每天都充滿喜悅！🥳`,
+                        `🎈 ${name} 的生日鐘聲響起！讓我們一起慶祝！🥂`,
+                        `🍰 願 ${name} 的夢想都能實現，生日快樂！🚀`,
+                        `✨ 為了 ${name} 準備的驚喜，生日快樂！🎁`,
+                        `🎊 世界上最可愛的 ${name} 生日快樂！永遠支持你！💪`,
+                        `🍾️ 舉杯！為 ${name} 的美好未來乾杯！生日快樂！🥂`,
+                        `💌 給 ${name} 的生日信，字字句句都是愛！生日快樂！🥰`,
+                        `🎤 ${name} 的歌聲是最好的禮物，生日快樂！🎵`,
+                        `👑 我們的王/后 ${name}，生日快樂！永遠閃耀！💎`,
+                        `🌈 願 ${name} 的每一天都如彩虹般絢爛！生日快樂！🎂`,
+                        `🥳 今天是 ${name} 的節日！一起嗨翻全場！狂歡！🎈`,
+                        `💐 ${name} 生日快樂！願你被鮮花和愛意包圍！🌸`,
+                        `🍀 願幸運與 ${name} 同在，生日快樂！永遠健康！💪`,
+                        `🌙 ${name} 是我們夜空中的月亮，生日快樂！✨`,
+                        `💌 ${name} 生日快樂！請收下我們最真摯的祝福！🎁`,
+                        `🎤 ${name} 的生日舞台，我們永遠在台下應援！🌟`,
+                        `✨ 願 ${name} 永遠保持初心，閃耀如鑽石！生日快樂！💎`,
+                        `💖 ${name} 的生日，我的心跳因你加速！🎂`,
+                    ];
+                    return messages[Math.floor(Math.random() * messages.length)];
+                };
+
+                const getDebutCongrats = (name) => {
+                    const messages = [
+                        `🎉 恭喜 ${name} 出道紀念日！感謝你選擇這條路！💖`,
+                        `🎤 ${name} 出道日快樂！你值得所有掌聲與愛！🌟`,
+                        `🏆 這是 ${name} 的里程碑！出道日快樂！未來繼續發光！✨`,
+                        `🌟 遇見 ${name} 是最美的意外！出道日快樂！🥂`,
+                        `🚀 ${name} 出道紀念日！夢想啟航，一路順風！🎈`,
+                        `💖 ${name} 出道了！世界因你而美好！永遠支持你！💪`,
+                        `✨ ${name} 永遠是舞台上的焦點，出道日快樂！🥳`,
+                        `🍾️ 為 ${name} 的出道和無數的汗水致敬！出道快樂！🥂`,
+                        `🌈 ${name} 出道紀念日快樂！我們的愛將與你並肩！🥰`,
+                        `💎 ${name} 耀眼出道！願你的光芒永不熄滅！💎`,
+                        `🎤 感謝 ${name} 的音樂與力量，出道日快樂！🎵`,
+                        `🥳 這是屬於 ${name} 和粉絲的狂歡日！出道快樂！🎉`,
+                        `💐 ${name} 出道紀念日！每一步都充滿意義！🌸`,
+                        `💪 ${name} 繼續衝！我們永遠是你的後盾！出道快樂！💯`,
+                        `💌 給 ${name} 最真誠的祝福，出道日快樂！🎁`,
+                        `✨ ${name} 出道，讓世界多了一份美好！生日快樂！🎂`,
+                        `💖 ${name} 出道日，粉絲濾鏡厚度再升級！永遠支持！🔥`,
+                        `🎤 願 ${name} 的歌聲響徹每個角落，出道快樂！🌟`,
+                        `👑 ${name} 帶著光環誕生，出道日快樂！永遠閃耀！✨`,
+                        `🎊 ${name} 辛苦了！所有的努力都值得，出道快樂！🎉`,
+                        `🥳 今天是 ${name} 夢想成真的日子，我們一起見證！🎈`,
+                        `🌟 ${name} 出道日快樂！願你被愛與幸福包圍！💖`,
+                    ];
+                    return messages[Math.floor(Math.random() * messages.length)];
                 };
 
 
