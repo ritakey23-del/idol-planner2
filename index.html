@@ -799,7 +799,7 @@
                             <div><label class="block text-sm font-medium text-slate-500 mb-1">代表貼紙 (Emoji)</label><input v-model="fandomForm.sticker" type="text" placeholder="✨" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
 
                             <div><label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 URL (選填)</label><input v-model="fandomForm.coverUrl" type="text" placeholder="https://..." class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800">
-                                <p class="text-xs text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，建議使用直式圖。</p>
+                                <p class="text-xs text-slate-400 mt-1">貼上 Imgur 或官方圖片網址，建議使用橫式圖。</p>
                             </div>
                             
                             <hr class="border-slate-100 my-2">
@@ -983,14 +983,21 @@
 
                 const changelogContent = ref([ 
                     { version: 'v1.0.0', date: '2025/12/04', items: [
-                        '新增「入坑紀念日」頁面：追蹤多位偶像的入坑天數。',
-                        '修正 Header 留白過多的問題，使介面更緊湊。',
-                        '入坑紀念日頁面支援封面圖片、Emoji 和重要日期（生日/出道日）輸入。',
-                        '優化入坑紀念日卡片排版，支援左側直式圖片，右側顯示天數。',
-                        '新增生日/出道日當天的情緒祝賀詞功能（20+ 條）。',
-                        '修復行程卡片有封面時，應援色被覆蓋的問題。',
-                        '修復並整合了所有刪除按鈕，加入了「此操作無法恢復」的確認提示。',
-                        '修復 App 標題輸入時，無法清除文字的問題。'
+                        '初始版本發布：包含行程管理、費用紀錄、地圖足跡及主題色切換。'
+                    ] },
+                    { version: 'v1.1.0', date: '2025/12/05', items: [
+                        '新增「入坑紀念日」功能：追蹤多位偶像的入坑天數。',
+                        '入坑日支援封面圖片、Emoji 和重要日期（生日/出道日）輸入/編輯。',
+                        '優化卡片排版，修復卡片封面圖上的應援色濾鏡。',
+                        '修正 App 標題輸入時，無法清除文字的問題。',
+                        '修復並整合了所有刪除按鈕，加入了「此操作無法恢復」的確認提示。'
+                    ] },
+                    { version: 'v1.2.0', date: '2025/12/06', items: [
+                        '新增生日與出道日當天的情緒祝賀詞功能（20+ 條）。',
+                        '出道日顯示優化：精確計算「出道第 X 年又 Y 天」。',
+                        '新增距離下一個生日/出道日倒數計時功能。',
+                        '入坑日卡片排版調整：將偶像名稱/Emoji 移至圖片下方，並與編輯/刪除按鈕分列。',
+                        '修正 Header 留白過多的問題，使介面更緊湊。'
                     ] },
                 ]);
 
@@ -1216,7 +1223,6 @@
                     if (years < 0) return '尚未出道';
                     if (years === 0) return `第 ${diffDays} 天`;
                     
-                    // 修正：只返回年數和天數
                     return `${years} 年又 ${diffDays} 天`;
                 };
 
