@@ -334,7 +334,7 @@
 
                         
           <div class="flex items-center gap-2 pt-1">
-                                    <button @click.stop="showCalendarOptions(event)" class="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                                    <button @click.stop="showCalendarOptions(event)" class="flex-1 py-2.5 bg-slate-500 hover:bg-slate-100 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition-colors">
                                     
       <i class="ph ph-calendar-plus text-sm"></i> 加入日曆
                                     </button>
@@ -367,7 +367,7 @@
                                    <div class="flex gap-2">
                                             <button @click.stop="editEvent(event)" class="text-slate-400 hover:text-blue-500"><i class="ph ph-pencil-simple text-lg"></i></button>
                
-                               <button @click.stop="deleteEvent(event.id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
+                               <button @click.stop="deleteEvent(id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
                                         </div>
                          
                  <div class="text-slate-400 transition-transform duration-300" :class="{'rotate-180': expandedEventId === event.id}">
@@ -434,9 +434,9 @@
                 <div v-if="fandoms.length > 0" class="space-y-4">
                     <div v-for="(fan, index) in fandoms" :key="index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                         
-                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
+                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex items-stretch">
                             
-                            <div v-if="fan.coverUrl" class="w-full h-40 shrink-0 relative overflow-hidden bg-slate-100" :class="{'md:w-1/3': fan.coverUrl, 'md:w-full': !fan.coverUrl, 'md:h-40': fan.coverUrl, 'md:h-auto': !fan.coverUrl}">
+                            <div v-if="fan.coverUrl" class="w-1/3 h-40 shrink-0 relative overflow-hidden bg-slate-100">
                                 <img :src="fan.coverUrl" class="w-full h-full object-cover" alt="Fandom Cover" onerror="this.style.display='none'">
                                 
                                 <div class="absolute inset-0 p-3 flex flex-col justify-end">
@@ -449,12 +449,15 @@
 
                             <div class="p-4 flex-1" :class="{'w-full': !fan.coverUrl}">
                                 <div class="flex justify-between items-start mb-2">
-                                    <div>
-                                        <h3 v-if="!fan.coverUrl" class="text-xl font-bold text-slate-800 flex items-center gap-2 mt-1">
-                                            <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
-                                            {{ fan.name }}
+                                    <div class="flex-1">
+                                        <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2 mt-1">
+                                            <template v-if="!fan.coverUrl">
+                                                <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
+                                                {{ fan.name }}
+                                            </template>
+                                            <p v-else class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
                                         </h3>
-                                        <p class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
+                                        <p v-if="fan.coverUrl" class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
                                     </div>
                                     <div class="flex gap-2 shrink-0">
                                         <button @click="editFandom(fan, index)" class="text-slate-400 hover:text-blue-500 p-1"><i class="ph ph-pencil-simple text-lg"></i></button>
@@ -472,14 +475,14 @@
                                 </div>
                                 
                                 <div class="mt-3 space-y-1">
-                                    <div v-if="fan.birthday && calculateDaysToNextDate(fan.birthday) !== 'N/A'" class="text-xs text-slate-600 flex items-center justify-center gap-1">
+                                    <div v-if="fan.birthday && calculateDaysToNextDate(fan.birthday) !== 'N/A'" class="text-xs text-slate-600 flex flex-col items-center justify-center gap-1">
                                         <i class="ph ph-cake text-sm text-pink-500"></i>
                                         <template v-if="calculateDaysToNextDate(fan.birthday) === 0">
                                             <span class="font-bold text-pink-500">{{ getBirthdayCongrats(fan.name) }}</span>
                                         </template>
                                         <template v-else>
-                                            距離生日還有 
-                                            <span class="font-bold text-pink-500">{{ calculateDaysToNextDate(fan.birthday) }} 天</span>
+                                            <p>距離生日還有 
+                                            <span class="font-bold text-pink-500">{{ calculateDaysToNextDate(fan.birthday) }} 天</span></p>
                                         </template>
                                     </div>
                                     <div v-if="fan.debutDate && calculateYearsAndDaysSinceDebut(fan.debutDate) !== 'N/A'" class="text-xs text-slate-600 flex flex-col items-center justify-center gap-1">
@@ -988,8 +991,18 @@
                 // --- END FANDOM STATES ---
 
                 const changelogContent = ref([ 
-                    { version: 'v1.0.0', date: '2025/12/06', items: ['初始版本發布', '支援行程、費用、地圖紀錄', '新增主題色自適應功能', '優化加入日曆多選單'] },
-                    { version: 'v0.9.0', date: '2025/11/20', items: ['Beta 測試', '新增資料備份/還原'] },
+                    { version: 'v1.0.0', date: '2025/12/06', items: [
+                        '修復入坑紀念日卡片排版和留白問題 (左圖右文，無圖時佔滿)。',
+                        '修正入坑紀念日天數計算邏輯 (+1天)。',
+                        '實作生日/出道日當天情緒祝賀詞功能，並修正日期檢查邏輯。',
+                        '優化入坑日卡片視覺，名稱/Emoji 不再疊圖。'
+                    ]},
+                    { version: 'v0.9.0', date: '2025/12/04', items: [
+                        '初始版本發布', 
+                        '支援行程、費用、地圖紀錄', 
+                        '新增主題色自適應功能', 
+                        '優化加入日曆多選單'
+                    ]},
                 ]);
 
                 const saveFandoms = () => {
