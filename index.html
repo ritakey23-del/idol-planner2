@@ -1216,6 +1216,7 @@
                     if (years < 0) return '尚未出道';
                     if (years === 0) return `第 ${diffDays} 天`;
                     
+                    // 修正：只返回年數和天數
                     return `${years} 年又 ${diffDays} 天`;
                 };
 
