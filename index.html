@@ -434,9 +434,9 @@
                 <div v-if="fandoms.length > 0" class="space-y-4">
                     <div v-for="(fan, index) in fandoms" :key="index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                         
-                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex items-stretch" :class="{'flex-row': fan.coverUrl, 'flex-col': !fan.coverUrl}">
+                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
                             
-                            <div v-if="fan.coverUrl" class="w-full h-40 shrink-0 relative overflow-hidden bg-slate-100" :class="{'md:w-1/3 md:h-40': fan.coverUrl}">
+                            <div v-if="fan.coverUrl" class="w-full h-40 shrink-0 relative overflow-hidden bg-slate-100">
                                 <img :src="fan.coverUrl" class="w-full h-full object-cover" alt="Fandom Cover" onerror="this.style.display='none'">
                                 
                                 <div class="absolute inset-0 p-3 flex flex-col justify-end">
@@ -447,7 +447,7 @@
                                 </div>
                             </div>
 
-                            <div class="p-4 flex-1" :class="{'w-full': !fan.coverUrl}">
+                            <div class="p-4 flex-1 w-full">
                                 <div class="flex justify-between items-start mb-2">
                                     <div>
                                         <p class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
@@ -462,7 +462,7 @@
                                     </div>
                                 </div>
                                 
-                                <div class="text-center mt-2 p-3 rounded-lg border border-dashed border-slate-200 bg-white shadow-inner">
+                                <div class="text-center mt-4 p-3 rounded-lg border border-dashed border-slate-200 bg-white shadow-inner">
                                     <div class="text-sm font-medium text-slate-600 mb-1">
                                         <template v-for="(part, i) in fandomMessageStatic(fan).message.split(calculateFandomDays(fan.date))" :key="i">
                                             {{ part }}
@@ -541,7 +541,7 @@
  grid-cols-2 gap-4">
                     <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-2xl border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">累計場次</div>
-                        <div class="text-2xl font-bold text-slate-800">{{ statsData.count }} <span class="text-sm font-normal text-slate-400">場</span></div>
+                        <div class="text-2xl font-bold text-slate-800">{{ statsData.count }} <span class="text-xs font-normal text-slate-400">場</span></div>
             
           </div>
                     <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
@@ -666,7 +666,7 @@
                               </div>
                             </div>
                             <div class="flex justify-between items-center">
-             
+                             
                      <div class="text-left">
                                     <div class="text-[10px] text-slate-400 uppercase">SEAT</div>
                                     <div class="font-bold text-primary" :style="{ color: 
@@ -987,21 +987,16 @@
                 // --- END FANDOM STATES ---
 
                 const changelogContent = ref([ 
-                    { 
-                        version: 'v1.0.0', 
-                        date: '2025/12/04', 
-                        items: [
-                            '初版發布', 
-                            '支援行程、費用、地圖紀錄', 
-                            '新增主題色自適應功能', 
-                            '優化加入日曆多選單',
-                            '新增入坑紀念日獨立頁面',
-                            '新增入坑日多欄位追蹤（入坑日、生日、出道日、封面圖、Emoji）',
-                            '優化入坑日卡片排版為左圖右文，無圖時自動填滿',
-                            '修復生日和出道日當天祝賀詞功能',
-                            '修復行程和入坑日刪除操作的誤刪提示'
-                        ]
-                    },
+                    { version: 'v1.0.0', date: '2025/12/04', items: [
+                        '新增「入坑紀念日」頁面：追蹤多位偶像的入坑天數。',
+                        '修正 Header 留白過多的問題，使介面更緊湊。',
+                        '入坑紀念日頁面支援封面圖片、Emoji 和重要日期（生日/出道日）輸入。',
+                        '優化入坑紀念日卡片排版，支援左側直式圖片，右側顯示天數。',
+                        '新增生日/出道日當天的情緒祝賀詞功能（20+ 條）。',
+                        '修復行程卡片有封面時，應援色被覆蓋的問題。',
+                        '修復並整合了所有刪除按鈕，加入了「此操作無法恢復」的確認提示。',
+                        '修復 App 標題輸入時，無法清除文字的問題。'
+                    ] },
                 ]);
 
                 const saveFandoms = () => {
@@ -1325,7 +1320,7 @@
 
                 // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
                 const fandomMessage = computed(() => { 
-                    if (fandoms.value.length === 0) {
+                    if (fandoms.value.length === 0 || fandoms.value.every(f => !f.date)) {
                         return "👋 點擊設定，開始你的入坑紀念日紀錄！";
                     }
                     
