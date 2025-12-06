@@ -434,23 +434,28 @@
                 <div v-if="fandoms.length > 0" class="space-y-4">
                     <div v-for="(fan, index) in fandoms" :key="index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                         
-                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex items-stretch">
                             
-                            <div v-if="fan.coverUrl" class="w-full h-40 shrink-0 relative overflow-hidden bg-slate-100">
+                            <div v-if="fan.coverUrl" class="w-1/3 h-40 shrink-0 relative overflow-hidden bg-slate-100">
                                 <img :src="fan.coverUrl" class="w-full h-full object-cover" alt="Fandom Cover" onerror="this.style.display='none'">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                                 
                                 <div class="absolute inset-0 p-3 flex flex-col justify-end">
                                     <h3 class="text-xl font-bold text-white drop-shadow-lg flex items-center gap-1">
-                                        {{ fan.name }} 
                                         <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
+                                        {{ fan.name }}
                                     </h3>
                                 </div>
                             </div>
-                            
-                            <div class="p-4" :class="{'bg-slate-50': !fan.coverUrl}">
+
+                            <div class="p-4 flex-1" :class="{'w-full': !fan.coverUrl}">
                                 <div class="flex justify-between items-start mb-2">
-                                    <p class="text-xs text-slate-500 shrink-0">入坑日: {{ fan.date }}</p>
+                                    <div>
+                                        <p class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
+                                        <h3 v-if="!fan.coverUrl" class="text-xl font-bold text-slate-800 flex items-center gap-2 mt-1">
+                                            <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
+                                            {{ fan.name }}
+                                        </h3>
+                                    </div>
                                     <div class="flex gap-2 shrink-0">
                                         <button @click="editFandom(fan, index)" class="text-slate-400 hover:text-blue-500 p-1"><i class="ph ph-pencil-simple text-lg"></i></button>
                                         <button @click="removeFandom(index)" class="text-slate-400 hover:text-red-500 p-1"><i class="ph ph-trash text-lg"></i></button>
@@ -485,8 +490,8 @@
                                         <template v-else>
                                             出道第 
                                             <span class="font-bold text-indigo-500">{{ calculateYearsAndDaysSinceDebut(fan.debutDate) }}</span>
-                                            (還有 <span class="font-bold text-indigo-500">{{ calculateDaysToNextDate(fan.debutDate) }}</span> 天到出道紀念日)
                                         </template>
+                                        <span class="text-slate-400"> (還有 {{ calculateDaysToNextDate(fan.debutDate) }} 天)</span>
                                     </div>
                                 </div>
                                 
@@ -1209,7 +1214,8 @@
                     if (years < 0) return '尚未出道';
                     if (years === 0) return `第 ${diffDays} 天`;
                     
-                    return `${years} 年又 ${diffDays} 天`;
+                    // 移除後面的 "又 幾天"，因為 HTML 已經拆開顯示了
+                    return `${years} 年`;
                 };
 
                 const getBirthdayCongrats = (name) => {
