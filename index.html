@@ -367,7 +367,7 @@
                                    <div class="flex gap-2">
                                             <button @click.stop="editEvent(event)" class="text-slate-400 hover:text-blue-500"><i class="ph ph-pencil-simple text-lg"></i></button>
                
-                               <button @click.stop="deleteEvent(event.id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
+                               <button @click.stop="deleteEvent(id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
                                         </div>
                          
                  <div class="text-slate-400 transition-transform duration-300" :class="{'rotate-180': expandedEventId === event.id}">
@@ -434,15 +434,15 @@
                 <div v-if="fandoms.length > 0" class="space-y-4">
                     <div v-for="(fan, index) in fandoms" :key="index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                         
-                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex items-stretch" :class="{'flex-row': fan.coverUrl, 'flex-col': !fan.coverUrl}">
+                        <div class="relative rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
                             
                             <div v-if="fan.coverUrl" class="w-full h-40 shrink-0 relative overflow-hidden bg-slate-100" :class="{'md:w-1/3 md:h-40': fan.coverUrl}">
                                 <img :src="fan.coverUrl" class="w-full h-full object-cover" alt="Fandom Cover" onerror="this.style.display='none'">
                                 
                                 <div class="absolute inset-0 p-3 flex flex-col justify-end">
                                     <h3 class="text-xl font-bold text-white drop-shadow-lg flex items-center gap-1">
-                                        <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
                                         {{ fan.name }}
+                                        <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
                                     </h3>
                                 </div>
                             </div>
@@ -452,8 +452,8 @@
                                     <div>
                                         <p class="text-xs text-slate-500">入坑日: {{ fan.date }}</p>
                                         <h3 v-if="!fan.coverUrl" class="text-xl font-bold text-slate-800 flex items-center gap-2 mt-1">
-                                            <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
                                             {{ fan.name }}
+                                            <span class="text-2xl italic rotate-6">{{ fan.sticker }}</span>
                                         </h3>
                                     </div>
                                     <div class="flex gap-2 shrink-0">
@@ -1486,7 +1486,6 @@
                             `重質不重量，每一次見面都是奇蹟 ✨ 珍貴的回憶已完美封存。`, 
                             "剛剛好的距離，剛剛好的愛，這一年很完美！🌸 愛情長跑的典範！", 
                             "生活與追星的完美平衡，你是時間管理大師！⏰ 找到屬於你的節奏！", 
-                
                             "細水長流的愛，才是最長情的告白 💌 你的心意細膩而溫柔。", 
                             "每一次見面，都為這一年增添了閃亮的色彩 🎨 創造了專屬的浪漫篇章。", 
                             `謝謝${mainArtist}，成為你平凡日子裡的一束光 💡 充滿了無窮的治癒能量。` 
