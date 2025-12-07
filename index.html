@@ -424,7 +424,7 @@ gap-3 items-center">
                                             <button @click.stop="editEvent(event)" class="text-slate-400 hover:text-blue-500"><i class="ph ph-pencil-simple text-lg"></i></button>
      
           
-                               <button @click.stop="deleteEvent(id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
+                               <button @click.stop="deleteEvent(event.id)" class="text-slate-400 hover:text-red-500"><i class="ph ph-trash text-lg"></i></button>
                                         </div>
              
             
@@ -942,7 +942,7 @@ ph-download-simple text-lg"></i> 備份資料 (下載檔案)</button>
                 <div class="bg-white w-full max-w-md 
  max-h-[90vh] sm:rounded-2xl rounded-t-3xl p-6 relative flex flex-col shadow-2xl overflow-hidden h-auto mb-safe">
                     <div class="flex justify-between items-center mb-4 shrink-0">
-                        <h2 class="text-xl font-bold text-slate-800">{{ isFandomEditing ?
+                        <h2 class="text-xl font-bold text-slate-800">{{ editFandomIndex !== null ?
 '編輯入坑日' : '新增入坑日' }}</h2>
                         <button @click="closeFandomModal" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200"><i class="ph ph-x"></i></button>
                     </div>
@@ -1009,7 +1009,7 @@ bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent
                                     
                                     <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer">
                                         <i class="ph ph-upload-simple text-lg"></i> 
-                                        {{ form.coverUrl ? '重新上傳圖片' : '上傳圖片 (建議 < 1MB)' }}
+                                        {{ form.coverUrl && form.coverUrl.startsWith('data:') ? '重新上傳圖片 (Base64)' : '上傳圖片 (建議 < 1MB)' }}
                                         <input type="file" accept="image/*" @change="handleImageUpload" class="hidden">
                                     </label>
                                     
@@ -1025,7 +1025,7 @@ bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent
                                         <button @click="form.coverUrl = ''" class="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full"><i class="ph ph-x text-sm"></i></button>
                                     </div>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-1">上傳圖片會以 Base64 格式儲存於本地，請控制大小。</p>
+                                <p class="text-xs text-slate-400 mt-1">上傳圖片會以 Base64 格式儲存於本地 (大小勿超 1MB)，或直接貼上圖片 URL。</p>
                             </div>
 
                             <div class="grid grid-cols-[1fr,60px] gap-3">
@@ -1142,7 +1142,7 @@ createApp({
                 const selectedYear = ref('ALL');
                 const expandedEventId = ref(null);
                 const isPrivacyMode = ref(true);
-                const isSearching = ref(false);
+                
                 const searchError = ref('');
      
           
@@ -1160,8 +1160,8 @@ const showImportModal = ref(false);
 ref(null);     
   
                 const ticketEvent = ref({});
-const isEditing = ref(false);
-                const isFandomEditing = ref(false); 
+                const isEditing = ref(false);
+                
                 const editFandomIndex = ref(null); 
                 const importJson = ref('');
                 let map = null;
@@ -1181,7 +1181,6 @@ const appVersion = ref('v1.0.0');
                 
                 // --- FANDOM STATES ---
                 const fandoms = ref(JSON.parse(localStorage.getItem('fandomFandoms') || '[]'));
-const currentFandomIndex = ref(0);
                 
                 const defaultFandomForm = {
                     name: '',
@@ -1229,14 +1228,14 @@ const saveFandoms = () => {
 };
 
                 const openFandomModal = () => {
-                    isFandomEditing.value = false;
-editFandomIndex.value = null;
+                    
+[span_11](start_span) editFandomIndex.value = null;
                     fandomForm.value = {...defaultFandomForm, date: new Date().toISOString().split('T')[0]};
                     showFandomModal.value = true;
                 };
 const editFandom = (fandom, index) => {
-                    isFandomEditing.value = true;
-editFandomIndex.value = index;
+                    
+[span_11](end_span) editFandomIndex.value = index;
                     // 使用深拷貝以避免直接修改原始數據
                     fandomForm.value = JSON.parse(JSON.stringify(fandom));
 showFandomModal.value = true;
@@ -1277,28 +1276,28 @@ return date instanceof Date && !isNaN(date);
                     // 日期格式檢查
                     if (!validateDate(fandomForm.value.date)) {
                         return alert('錯誤：入坑日期格式無效！請使用 YYYY-MM-DD 格式。');
-}
+[span_12](start_span) }
                     if (fandomForm.value.birthday && !validateDate(fandomForm.value.birthday)) {
                         return alert('錯誤：生日日期格式無效！請使用 YYYY-MM-DD 格式。');
-}
+[span_12](end_span) }
                     if (fandomForm.value.debutDate && !validateDate(fandomForm.value.debutDate)) {
                         return alert('錯誤：出道日期格式無效！請使用 YYYY-MM-DD 格式。');
-}
+[span_13](start_span) }
 
-                    if(isFandomEditing.value && editFandomIndex.value !== null) {
+                    if(editFandomIndex.value !== null) {
                         fandoms.value[editFandomIndex.value] = JSON.parse(JSON.stringify(fandomForm.value));
-} else {
+[span_13](end_span) } else {
                         fandoms.value.push(JSON.parse(JSON.stringify(fandomForm.value)));
-}
+[span_14](start_span) }
                     saveFandoms();
-closeFandomModal();
+[span_14](end_span) closeFandomModal();
                 };
 
                 const removeFandom = (index) => {
                     // 新增確認提示
                     if (confirm('確定要刪除這個入坑紀念日嗎？此操作無法恢復。')) {
                         fandoms.value.splice(index, 1);
-saveFandoms();
+[span_15](start_span) saveFandoms();
                     }
                 };
 onMounted(() => {
@@ -1552,31 +1551,35 @@ const randomIndex = calculateFandomDays(fandom.date) % messages.length;
 
                 // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
                 const fandomMessage = computed(() => { 
+                    
+                    return "👋 點擊設定，開始你的入坑紀念日紀錄！";
+                    /* 原始邏輯已移除，避免無用程式碼警告 
                     if (fandoms.value.length === 0 || fandoms.value.every(f => !f.date)) {
                         return "👋 點擊設定，開始你的入坑紀念日紀錄！";
                
-     }
+                    }
                     
                     // 簡單輪播邏輯
                     const activeFandoms = fandoms.value.filter(f => f.date);
                     if (activeFandoms.length === 0) return "👋 點擊設定，開始你的入坑紀念日紀錄！";
 
    
-                 const currentFandom = activeFandoms[currentFandomIndex.value % activeFandoms.length];
+                    const currentFandom = activeFandoms[currentFandomIndex.value % activeFandoms.length];
 
                     const { message, days } = fandomMessageStatic(currentFandom);
                     
                     // 每 5 秒自動切換
          
-           if (activeFandoms.length > 1) {
+                    if (activeFandoms.length > 1) {
                         setTimeout(() => {
                             currentFandomIndex.value = (currentFandomIndex.value + 1) % activeFandoms.length;
                         }, 
-5000);
+                        5000);
                     }
                     
                     return message;
-});
+                    */
+                });
                 
                 const greetingMessage = computed(() => {
                     const hour = new Date().getHours();
@@ -1809,9 +1812,9 @@ const toggleExpand = (id) => expandedEventId.value = (expandedEventId.value === 
 const togglePrivacy = () => isPrivacyMode.value = !isPrivacyMode.value;
                 const setTheme = (c) => {
                     themeColor.value = c;
-localStorage.setItem('idolTheme', c);
+[span_15](end_span) localStorage.setItem('idolTheme', c);
                 }
-                const updateCustomTheme = (e) => setTheme(e.target.value);
+                
 const openModal = () => {
                     isEditing.value = false;
 form.value = { ...defaultForm, date: new Date().toISOString().split('T')[0], color: themeColor.value, expenses: [{item:'門票', amount:''}], checklist:[], memo:'' };
@@ -1874,7 +1877,7 @@ const toggleSettingsModal = () => showSettingsModal.value = !showSettingsModal.v
 showChangelogModal.value = true;
                 };
                 
-                // NEW: 處理圖片上傳並轉 Base64
+                // 處理圖片上傳並轉 Base64
                 const handleImageUpload = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
@@ -1896,8 +1899,6 @@ showChangelogModal.value = true;
 
                     // 讀取檔案，結果會被 Base64 編碼 (Data URL)
                     reader.readAsDataURL(file);
-                    // 清空 URL 輸入框，避免混淆
-                    // form.value.coverUrl = ''; // 保持原本的 URL 輸入框邏輯（讓用戶可以貼連結或上傳）
                 };
 
                 const searchCoordinates = async () => {
@@ -1905,8 +1906,8 @@ showChangelogModal.value = true;
                         searchError.value = "請先輸入地點名稱";
 return;
                     }
-                    isSearching.value = true;
-searchError.value = '';
+                    
+[span_16](start_span) searchError.value = '';
                     
                     const apiUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.value.location)}&limit=1`;
                     try {
@@ -1940,8 +1941,8 @@ form.value.lng = null;
                         console.error("地圖定位錯誤:", e);
 searchError.value = `連線錯誤或請求被拒絕: ${e.message}。請稍後再試。`;
                     } finally {
-                        isSearching.value = false;
-if (activeTab.value === 'map') {
+                        
+[span_16](end_span) if (activeTab.value === 'map') {
                             nextTick(() => { initMap(); });
 }
                     }
@@ -2116,16 +2117,17 @@ const getDaysDiff = (d) => Math.ceil((new Date(d).setHours(0,0,0,0) - new Date()
                     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#';
 return {
                     events, activeTab, viewMode, themeColor, selectedYear, expandedEventId, isPrivacyMode, customTitle,
-                    showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, showChangelogModal, showFandomModal, fandomForm, isFandomEditing, editFandomIndex,
+                    showModal, showSettingsModal, showImportModal, showTicketModal, showCalendarModal, showChangelogModal, showFandomModal, fandomForm, 
+                    editFandomIndex,
                     calendarEvent, ticketEvent, isEditing, form, importJson, searchQuery,
                   
   cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, 
               
-                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
+                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, processImport, showChangelog,
                     toggleExpand, togglePrivacy, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, 
 addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, editFandom, closeFandomModal, openFandomModal, fandoms,
-                    getEventColor, emotionalSummary, availableYears, searchCoordinates, isSearching, searchError, mappedEventsCount, missingCoordsCount,
+                    getEventColor, emotionalSummary, availableYears, searchCoordinates, searchError, mappedEventsCount, missingCoordsCount,
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
                     isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut, getBirthdayCongrats, 
