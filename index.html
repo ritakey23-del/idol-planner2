@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>我的追星日記 🌟 | [span_0](start_span)追星行程管理、費用紀錄與地圖足跡[span_0](end_span)</title>
+    <title>我的追星日記 🌟 | 追星行程管理、費用紀錄與地圖足跡</title>
     
     <meta name="description" content="專為追星族設計的日記App。輕鬆紀錄偶像活動行程、演唱會費用、追星足跡地圖，並管理出發前必帶清單。讓每一份愛意都被珍藏！">
     <meta name="keywords" content="追星日記, 偶像行程, 演唱會紀錄, 追星地圖, 粉絲日記, 應援費用, Vue3">
@@ -23,7 +23,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   
-    [span_1](start_span)<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Quicksand:wght@500;700&family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">[span_1](end_span)
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Quicksand:wght@500;700&family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -695,8 +695,7 @@
              </div>
                 
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                    <div 
- class="flex justify-between items-start mb-4"><h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就</h3></div>
+                    <div class="flex justify-between items-start mb-4"><h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就</h3></div>
                   
     <p class="text-xs text-slate-400 mb-3 bg-slate-50 p-2 rounded-lg"><i class="ph ph-info"></i> 已排除：簽售會、事前錄製、錄製等行程</p>
                     <div v-if="statsData.series.length > 0" class="space-y-3">
@@ -907,8 +906,7 @@
                     <p class="text-xs text-slate-400 mb-2">資料備份與轉移</p>
                     <div class="flex flex-col gap-2">
                         <button @click="downloadBackup" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 
- hover:bg-slate-200"><i class="ph 
- ph-download-simple text-lg"></i> 備份資料 (下載檔案)</button>
+ hover:bg-slate-200"><i class="ph ph-download-simple text-lg"></i> 備份資料 (下載檔案)</button>
                         <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer"><i class="ph ph-upload-simple text-lg"></i> 還原資料 (上傳檔案)<input type="file" accept=".json" @change="restoreBackup" class="hidden"></label>
                     </div>
                 </div>
@@ -1000,28 +998,22 @@
                             <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 (上傳或連結)</label>
+                                <label class="block text-sm font-medium text-slate-500 mb-1">封面圖片連結 (URL)</label>
                                 <div class="relative flex flex-col gap-2">
-                                    
-                                    <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer">
-                                        <i class="ph ph-upload-simple text-lg"></i> 
-                                        {{ form.coverUrl && form.coverUrl.startsWith('data:') ? '重新上傳圖片 (Base64)' : '上傳圖片 (建議 < 1MB)' }}
-                                        <input type="file" accept="image/*" @change="handleImageUpload" class="hidden">
-                                    </label>
                                     
                                     <div class="relative flex-1">
                                         <i class="ph ph-link absolute left-3 top-3.5 text-slate-400"></i>
                                         <input v-model="form.coverUrl" type="text" 
-                                            placeholder="或貼上 Imgur / 官方圖片連結 (URL)" 
+                                            placeholder="貼上 Imgur 或官方圖片連結 (URL)" 
                                             class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 text-sm focus:ring-2 focus:ring-primary/50 text-slate-800">
                                     </div>
                                     
                                     <div v-if="form.coverUrl" class="mt-2 relative">
-                                        <img :src="form.coverUrl" class="w-full h-32 object-cover rounded-xl border border-slate-200" alt="Cover Preview">
+                                        <img :src="form.coverUrl" class="w-full h-32 object-cover rounded-xl border border-slate-200" alt="Cover Preview" onerror="this.style.display='none'">
                                         <button @click="form.coverUrl = ''" class="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full"><i class="ph ph-x text-sm"></i></button>
                                     </div>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-1">上傳圖片會以 Base64 格式儲存於本地 (大小勿超 1MB)，或直接貼上圖片 URL。</p>
+                                <p class="text-xs text-slate-400 mt-1">請貼上外部圖片連結 (URL)，建議使用橫式圖。</p>
                             </div>
 
                             <div class="grid grid-cols-[1fr,60px] gap-3">
@@ -1580,7 +1572,7 @@
                 const greetingMessage = computed(() => {
                     const hour = new Date().getHours();
                     const msgs = [
-                      
+                        
                         "無論多遠，心都在一起 
  💖", 
                         "存錢是為了更好的相遇 💰", 
@@ -1873,29 +1865,7 @@
  showChangelogModal.value = true;
                 };
                 
-                // 處理圖片上傳並轉 Base64
-                const handleImageUpload = (event) => {
-                    const file = event.target.files[0];
-                    if (!file) return;
-
-                    // 限制檔案大小 (1MB)
-                    const maxSize = 1024 * 1024; 
-                    if (file.size > maxSize) {
-                        alert('圖片檔案過大，請選擇小於 1MB 的圖片！');
-                        event.target.value = null; // 清除檔案輸入
-                        return;
-                    }
-
-                    const reader = new FileReader();
-
-                    reader.onload = (e) => {
-                        // 轉換為 Base64 字串並賦值給 form.coverUrl
-                        form.value.coverUrl = e.target.result;
-                    };
-
-                    // 讀取檔案，結果會被 Base64 編碼 (Data URL)
-                    reader.readAsDataURL(file);
-                };
+                // 移除 Base64 處理邏輯
 
                 const searchCoordinates = async () => {
                     if (!form.value.location) {
@@ -2128,7 +2098,7 @@
     
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
                     isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut, getBirthdayCongrats, 
- getDebutCongrats, handleImageUpload
+ getDebutCongrats
                 };
  }
         }).mount('#app');
