@@ -1,248 +1,164 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Threads 抽獎小幫手</title>
+    <title>圖片優化與 Base64 編碼範例 (修正版)</title>
     <style>
-        /* 基礎樣式 */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f4f7f6;
-            color: #333;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 30px;
-            background-color: #fff;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-        }
-        h1 {
-            color: #0095f6; /* Threads/Meta Blue */
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .input-group {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fafafa;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #555;
-        }
-        input[type="text"], input[type="number"], select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button {
-            background-color: #0095f6;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            width: 100%;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #007bb5;
-        }
-
-        /* 結果顯示區 */
-        #results {
-            margin-top: 30px;
-            padding: 20px;
-            border: 2px dashed #0095f6;
-            border-radius: 8px;
-            min-height: 50px;
-            background-color: #e9f7ff;
-        }
-        #results h2 {
-            margin-top: 0;
-            color: #0095f6;
-            border-bottom: 2px solid #0095f6;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        .winner-list {
-            list-style: none;
-            padding: 0;
-        }
-        .winner-list li {
-            background-color: #fff;
-            margin-bottom: 8px;
-            padding: 10px;
-            border-radius: 4px;
-            border-left: 5px solid #0095f6;
-            font-size: 1.1em;
-            font-weight: 500;
-        }
-        .note {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-            border-radius: 4px;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: 0 auto; padding: 25px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 10px; }
+        #output-area { margin-top: 25px; padding: 20px; background-color: #e9ecef; border-radius: 6px; }
+        .stats p { margin: 8px 0; font-size: 1.1em; }
+        .stats strong { color: #d9534f; font-weight: bold; }
+        textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid #ccc; padding: 8px; border-radius: 4px; }
+        .alert-message { color: #3c763d; background-color: #dff0d8; border: 1px solid #d6e9c6; padding: 10px; margin-top: 15px; border-radius: 4px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🎉 Threads 留言抽獎工具 🎉</h1>
-
-    <div class="note">
-        **注意：** 本工具使用**模擬留言資料**展示抽獎邏輯。實際應用需透過 Threads/Meta API 獲取真實留言，這超出了單一 HTML 檔案的能力範圍。
-    </div>
-
-    <div class="input-group">
-        <label for="link">🔗 Threads 串文連結 (模擬輸入)</label>
-        <input type="text" id="link" value="https://www.threads.net/t/ExamplePostID" placeholder="請貼上 Threads 貼文連結">
-    </div>
-
-    <div class="input-group">
-        <label for="winnersCount">🏆 欲抽出人數</label>
-        <input type="number" id="winnersCount" min="1" max="50" value="3" placeholder="請輸入抽獎人數">
-    </div>
-
-    <div class="input-group">
-        <label for="mentionFilter">👥 篩選條件：留言中需 @ 至少幾位朋友？</label>
-        <input type="number" id="mentionFilter" min="0" value="1" placeholder="例如：1 表示至少 @1 位">
-    </div>
-
-    <button onclick="startLottery()">開始抽獎</button>
-
-    <div id="results">
-        <h2>中獎結果</h2>
-        <p>點擊上方按鈕開始抽獎。</p>
+    <h1>🖼️ 圖片上傳優化與 Base64 編碼</h1>
+    <p>設定優化參數：最大寬度 <strong id="paramWidth">800px</strong>，JPEG 質量 <strong id="paramQuality">70%</strong>。</p>
+    
+    <input type="file" id="imageInput" accept="image/*">
+    
+    <div class="alert-message" id="successMessage">✅ 圖片處理完成！請查看下方數據。</div>
+    
+    <div id="output-area">
+        <h3>📊 處理統計</h3>
+        <div class="stats">
+            <p>原始檔案大小：<strong id="originalSize">0 KB</strong></p>
+            <p>Base64 字串長度 (傳輸大小)：<strong id="base64Length">0 KB</strong></p>
+            <p>🌟 檔案優化效果：<strong id="compressionRatio">N/A</strong></p>
+        </div>
+        
+        <hr>
+        
+        <h4>Base64 傳輸數據 (開頭範例)</h4>
+        <textarea id="base64Output" rows="5" readonly placeholder="Base64 字串將顯示在這裡..."></textarea>
+        
+        <h4>優化後的圖片預覽</h4>
+        <img id="previewImage" src="" alt="圖片預覽" style="max-width: 100%; height: auto; margin-top: 10px; border: 1px solid #ddd; display: none;">
     </div>
 </div>
 
 <script>
-    // 模擬的留言資料 (用戶名, 留言內容)
-    const mockComments = [
-        { user: "user_A", text: "太棒了！@friend_1 一起參加！" }, // 1 mention
-        { user: "user_B", text: "我也要試試手氣！" }, // 0 mention
-        { user: "user_C", text: "這次的獎品很吸引人！@friend_2 @friend_3" }, // 2 mentions
-        { user: "user_D", text: "祝大家幸運！" }, // 0 mention
-        { user: "user_E", text: "好想要！@friend_4" }, // 1 mention
-        { user: "user_F", text: "一定要參加！@friend_5 @friend_6 @friend_7" }, // 3 mentions
-        { user: "user_G", text: "路過幫推！" }, // 0 mention
-        { user: "user_H", text: "衝了！@friend_8" }, // 1 mention
-        { user: "user_I", text: "期待中獎！@friend_9 @friend_10" }, // 2 mentions
-        { user: "user_J", text: "參加+1！" }, // 0 mention
-        // 增加更多不同條件的用戶
-        { user: "user_K", text: "希望是我！@1 @2 @3" }, // 3 mentions
-        { user: "user_L", text: "好活動！@f1" }, // 1 mention
-        { user: "user_M", text: "純支持" }, // 0 mention
-        { user: "user_N", text: "@wow" }, // 1 mention
-        { user: "user_O", text: "讚啦！@x @y" }, // 2 mentions
-    ];
+// --- 配置參數 ---
+const MAX_WIDTH = 800; // 圖片最大寬度
+const JPEG_QUALITY = 0.7; // 圖片輸出品質 (0.0 到 1.0)
 
-    /**
-     * 檢查留言是否符合篩選條件
-     * @param {string} commentText - 留言內容
-     * @param {number} requiredMentions - 要求的 @ 數量
-     * @returns {number} - 留言中實際找到的 @ 數量
-     */
-    function countMentions(commentText) {
-        // 使用正則表達式尋找 '@' 後面緊接著的非空白字元 (模擬用戶名)
-        // \B 表示非單詞邊界，確保不是電子郵件的一部分或其他誤判
-        const mentionRegex = /@\S+/g; 
-        const matches = commentText.match(mentionRegex);
-        return matches ? matches.length : 0;
+// 更新顯示的參數
+document.getElementById('paramWidth').textContent = `${MAX_WIDTH}px`;
+document.getElementById('paramQuality').textContent = `${JPEG_QUALITY * 100}%`;
+
+document.getElementById('imageInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file || !file.type.startsWith('image/')) {
+        alert('請選擇有效的圖片檔案。');
+        return;
     }
 
-    /**
-     * 開始抽獎的主要函數
-     */
-    function startLottery() {
-        const link = document.getElementById('link').value;
-        const winnersCount = parseInt(document.getElementById('winnersCount').value);
-        const requiredMentions = parseInt(document.getElementById('mentionFilter').value);
-        const resultsDiv = document.getElementById('results');
+    // 顯示原始檔案大小
+    const originalSizeKB = file.size / 1024;
+    document.getElementById('originalSize').textContent = `${originalSizeKB.toFixed(2)} KB`;
+    document.getElementById('successMessage').style.display = 'none'; // 處理前隱藏提示
 
-        // 檢查輸入是否有效
-        if (winnersCount <= 0 || requiredMentions < 0) {
-            resultsDiv.innerHTML = '<h2>🚨 錯誤</h2><p>請輸入有效的抽獎人數和篩選條件。</p>';
-            return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const originalDataUrl = e.target.result;
+        // 呼叫圖片優化函數
+        optimizeImage(originalDataUrl, originalSizeKB); 
+    };
+
+    reader.onerror = function() {
+        alert('讀取檔案時發生錯誤。');
+    };
+
+    // 以 Data URL 格式讀取檔案
+    reader.readAsDataURL(file);
+});
+
+
+/**
+ * 圖片優化函數：調整尺寸並重新編碼 (優化的關鍵)
+ * @param {string} dataURL - 原始圖片的 Data URL
+ * @param {number} originalSizeKB - 原始檔案大小 (KB)
+ */
+function optimizeImage(dataURL, originalSizeKB) {
+    const img = new Image();
+    img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // 1. 調整尺寸 (等比例縮小)
+        if (width > MAX_WIDTH) {
+            height = Math.round(height * (MAX_WIDTH / width));
+            width = MAX_WIDTH;
         }
 
-        // --- 1. 篩選合格名單 ---
-        const qualifiedUsers = [];
-        const uniqueUsers = new Map(); // 用 Map 記錄，確保一人只有一次抽獎機會 (去重)
+        canvas.width = width;
+        canvas.height = height;
 
-        for (const comment of mockComments) {
-            // 計算留言中的 @ 數量
-            const actualMentions = countMentions(comment.text);
+        const ctx = canvas.getContext('2d');
+        // 確保圖片繪製是平滑的
+        ctx.drawImage(img, 0, 0, width, height);
 
-            // 檢查是否符合篩選條件
-            if (actualMentions >= requiredMentions) {
-                // 檢查是否已在名單中
-                if (!uniqueUsers.has(comment.user)) {
-                    uniqueUsers.set(comment.user, { 
-                        user: comment.user, 
-                        mentions: actualMentions,
-                        comment: comment.text 
-                    });
-                }
-            }
-        }
+        // 2. Base64 編碼與優化 (確保不會亂碼)
+        // 使用 JPEG 格式和設定的品質參數進行 Base64 輸出
+        const optimizedDataURL = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
 
-        // 將 Map 轉換為陣列
-        const filteredList = Array.from(uniqueUsers.values());
-
-        // --- 2. 抽獎邏輯 ---
-        if (filteredList.length < winnersCount) {
-             resultsDiv.innerHTML = `<h2>💔 抽獎失敗</h2><p>符合條件的用戶只有 ${filteredList.length} 位，但您要求抽出 ${winnersCount} 位。請調整人數或條件。</p>`;
-            return;
-        }
-
-        const winners = [];
-        let pool = [...filteredList]; // 複製一份，用於抽獎池
-
-        for (let i = 0; i < winnersCount; i++) {
-            // 生成隨機索引
-            const randomIndex = Math.floor(Math.random() * pool.length);
-            // 選出中獎者
-            const winner = pool[randomIndex];
-            winners.push(winner);
-            // 從抽獎池中移除該中獎者，確保不會重複中獎
-            pool.splice(randomIndex, 1); 
-        }
-
-        // --- 3. 顯示結果 ---
-        let resultsHtml = `<h2>🥳 中獎名單 (${winners.length} 位)</h2>`;
-        resultsHtml += `<p>**符合條件總人數：** ${filteredList.length} 位 (須 @ 至少 ${requiredMentions} 位)</p>`;
-        resultsHtml += `<ul class="winner-list">`;
-        
-        winners.forEach((winner, index) => {
-            resultsHtml += `<li>
-                **${index + 1}.** ${winner.user}
-                (留言："${winner.comment.substring(0, 40)}..." | @數: ${winner.mentions})
-            </li>`;
-        });
-        
-        resultsHtml += `</ul>`;
-
-        resultsDiv.innerHTML = resultsHtml;
+        // 3. 處理結果
+        displayBase64Result(optimizedDataURL, originalSizeKB);
+    };
+    
+    img.onerror = function() {
+        alert("圖片加載失敗，請確認檔案有效性。");
     }
 
+    img.src = dataURL; // 開始加載圖片
+}
+
+/**
+ * 顯示 Base64 處理結果和壓縮統計
+ * @param {string} base64DataUrl - 優化後的 Base64 Data URL
+ * @param {number} originalSizeKB - 原始檔案大小 (KB)
+ */
+function displayBase64Result(base64DataUrl, originalSizeKB) {
+    // 移除 Data URL 前綴 (例如: "data:image/jpeg;base64,")
+    const base64String = base64DataUrl.split(',')[1];
+    
+    // Base64 字串的長度，這就是實際傳輸的字節數
+    const base64LenKB = base64String.length / 1024;
+    document.getElementById('base64Length').textContent = `${base64LenKB.toFixed(2)} KB`;
+
+    // 計算壓縮比 (Base64 比原始二進制數據大約多 33%)
+    // 傳輸大小 vs. 原始檔案大小
+    const reduction = originalSizeKB - base64LenKB; 
+    const compressionRatio = ((originalSizeKB - base64LenKB) / originalSizeKB) * 100;
+    
+    let ratioText;
+    if (reduction > 0) {
+        // 如果 Base64 字串大小小於原始檔案大小，代表優化成功 (通常發生在原始圖片是未壓縮的 PNG 時)
+        ratioText = `檔案縮小 ${Math.abs(compressionRatio).toFixed(2)}%`;
+        document.getElementById('compressionRatio').style.color = '#28a745'; // 綠色
+    } else {
+        // Base64 編碼本身會增大檔案 (約 33%)。如果最終 Base64 仍大於原始檔案，表示原圖已經很小或參數設置過高。
+        ratioText = `檔案增大 ${Math.abs(compressionRatio).toFixed(2)}%`;
+        document.getElementById('compressionRatio').style.color = '#ffc107'; // 黃色
+    }
+    
+    document.getElementById('compressionRatio').textContent = ratioText;
+
+    // 顯示 Base64 字符串
+    document.getElementById('base64Output').value = base64DataUrl.substring(0, 150) + '... (已省略，完整字串長度約 ' + base64LenKB.toFixed(2) + ' KB)';
+
+    // 顯示預覽圖片
+    const preview = document.getElementById('previewImage');
+    preview.src = base64DataUrl;
+    preview.style.display = 'block';
+    
+    document.getElementById('successMessage').style.display = 'block'; // 處理完成，顯示提示
+}
 </script>
 
 </body>
