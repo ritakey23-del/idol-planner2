@@ -7,8 +7,6 @@
 追星行程管理、費用紀錄與地圖足跡</title>
     
     <meta name="description" content="專為追星族設計的日記App。輕鬆紀錄偶像活動行程、演唱會費用、追星足跡地圖，並管理出發前必帶清單。讓每一份愛意都被珍藏！">
-    <meta name="keywords" content="追星日記, 偶像行程, 演唱會紀錄, 追星地圖, 粉絲日記, 應援費用, Vue3">
-
     <meta property="og:title" content="我的追星日記 🌟 - 行程費用管理 App">
     <meta property="og:description" content="追星族必備！紀錄所有偶像活動、演唱會門票支出、地圖足跡，不再錯過任何一個重要瞬間。">
     <meta property="og:type" content="website">
@@ -123,7 +121,6 @@
         /* Rescue Button */
         #rescue-btn {
             display: none;
- /* Vue 載入成功後會維持隱藏 */
             position: fixed; top: 10px;
  left: 10px; z-index: 99999; 
             background-color: #ef4444; color: white; padding: 8px 16px; 
@@ -1181,7 +1178,7 @@
                 
                 const defaultFandomForm = {
                     name: '',
-                    date: '', // 入坑日
+                    date: '', 
                     sticker: '',
                     coverUrl: '',
        
@@ -1245,11 +1242,8 @@
 
                 const validateDate = (dateString) => {
                     if (!dateString) return true;
- // Allow empty date for optional fields
-                    // Basic YYYY-MM-DD validation
                     const regex = /^\d{4}-\d{2}-\d{2}$/;
  if (!regex.test(dateString)) {
-                        // 嘗試修復 YYYYMMDD 格式
                         if (/^\d{8}$/.test(dateString)) {
                             const fixedDate = `${dateString.substring(0, 4)}-${dateString.substring(4, 6)}-${dateString.substring(6, 8)}`;
  const date = new Date(fixedDate);
@@ -1270,7 +1264,6 @@
                          return alert('錯誤：入坑日期不能為空！');
  }
 
-                    // 日期格式檢查
                     if (!validateDate(fandomForm.value.date)) {
                         return alert('錯誤：入坑日期格式無效！請使用 YYYY-MM-DD 格式。');
  }
@@ -1291,7 +1284,6 @@
                 };
 
                 const removeFandom = (index) => {
-                    // 新增確認提示
                     if (confirm('確定要刪除這個入坑紀念日嗎？此操作無法恢復。')) {
                         fandoms.value.splice(index, 1);
  saveFandoms();
@@ -1352,14 +1344,12 @@
                     return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
  };
                 
-                // 通用亮度判斷函數
                 const isColorLight = (color) => {
                     let hex = color.replace('#', '');
  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
                     const r = parseInt(hex.substring(0, 2), 16);
  const g = parseInt(hex.substring(2, 4), 16);
                     const b = parseInt(hex.substring(4, 6), 16);
- // HSP 亮度判斷 (閾值 180)
                     const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
  return hsp > 180;
                 };
@@ -1370,35 +1360,28 @@
                     '--primary-light': adjustColor(themeColor.value, 150)
                 }));
  const getEventColor = (event) => (!event.color || event.color === '') ? themeColor.value : event.color;
- // Header 相關的動態顏色判斷
                 const isThemeColorLight = computed(() => isColorLight(themeColor.value));
  const headerTextColor = computed(() => isThemeColorLight.value ? 'text-slate-800' : 'text-white');
- // NEW: Fandom Days Calculator (天數 +1)
                 const calculateFandomDays = (dateStr) => {
                     if (!dateStr || !validateDate(dateStr)) return 0;
  const start = new Date(dateStr);
                     const today = new Date();
                     const diffTime = today.getTime() - start.getTime();
- // 加 1 是為了包含入坑當天
                     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
  return diffDays > 0 ? diffDays : 0;
                 };
 
-                // NEW: Days to Next Important Date (修正：計算距離下一個生日還剩多少天)
                 const calculateDaysToNextDate = (dateStr) => {
                     if (!dateStr || !validateDate(dateStr)) return 'N/A';
- // 假設日期為 YYYY-MM-DD
                     const dateParts = dateStr.split('-');
  const month = Number(dateParts[1]);
                     const day = Number(dateParts[2]);
                     
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
- // 創建當年份的目標日期
                     let nextDate = new Date(today.getFullYear(), month - 1, day);
  nextDate.setHours(0, 0, 0, 0);
                     
-                    // 如果今年的日期已過，則使用下一年的日期
                     if (nextDate.getTime() < today.getTime()) {
                         nextDate.setFullYear(today.getFullYear() + 1);
  }
@@ -1407,11 +1390,9 @@
  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                     if (diffDays === 0) return 0;
- // 當天
                     return diffDays;
  };
 
-                // NEW: Years and Days Since Debut
                 const calculateYearsAndDaysSinceDebut = (dateStr) => {
                     if (!dateStr || !validateDate(dateStr)) return 'N/A';
  const debut = new Date(dateStr);
@@ -1419,7 +1400,6 @@
                     today.setHours(0, 0, 0, 0);
 
                     let years = today.getFullYear() - debut.getFullYear();
- // 檢查是否已過當年的紀念日
                     const hasPassed = (today.getMonth() > debut.getMonth() || (today.getMonth() === debut.getMonth() && today.getDate() >= debut.getDate()));
  if (!hasPassed) {
                         years--;
@@ -1506,7 +1486,6 @@
                 };
 
 
-                // NEW: Static Fandom Message for List
                 const fandomMessageStatic = (fandom) => {
                     const diffDays = calculateFandomDays(fandom.date);
  const name = fandom.name;
@@ -1539,21 +1518,18 @@
                     ];
  const randomIndex = calculateFandomDays(fandom.date) % messages.length;
                     const messageTemplate = messages[randomIndex];
- // 返回包含情緒文字和天數數字的物件
                     return {
-                        message: messageTemplate.replace(/\[DAYS\]/g, diffDays), // 使用正則表達式替換所有 [DAYS]
+                        message: messageTemplate.replace(/\[DAYS\]/g, diffDays), 
                         days: diffDays
                     };
  };
 
-                // Fandom Message Logic for Header (情緒化訊息，用於 Header 輪播)
                 const fandomMessage = computed(() => { 
                     if (fandoms.value.length === 0 || fandoms.value.every(f => !f.date)) {
                         return "👋 點擊設定，開始你的入坑紀念日紀錄！";
                
        }
                     
-                    // 簡單輪播邏輯
                     const activeFandoms = fandoms.value.filter(f => f.date);
                     if (activeFandoms.length === 0) return "👋 點擊設定，開始你的入坑紀念日紀錄！";
 
@@ -1850,7 +1826,6 @@
  };
 
                 const deleteEvent = (id) => {
-                    // 新增確認提示
                     if (confirm('確定要刪除此行程嗎？此操作無法恢復。')) {
                         events.value = events.value.filter(e => e.id !== id);
  if(expandedEventId.value === id) expandedEventId.value = null;
@@ -1882,9 +1857,6 @@
                     try {
                         const response = await fetch(apiUrl, {
                             headers: {
-                                // Nominatim 
- 服務要求 User-Agent 標頭
-     
                                'User-Agent': 'MyIdolTrackerApp/1.0 (contact@example.com)' 
                             }
                         });
@@ -1897,7 +1869,6 @@
                             form.value.lat = parseFloat(data[0].lat);
  form.value.lng = parseFloat(data[0].lon);
                             
-                            // 定位成功後提示座標
                             const latFormatted = form.value.lat.toFixed(4);
  const lngFormatted = form.value.lng.toFixed(4);
                             searchError.value = `定位成功！經緯度: Lat ${latFormatted}, Lng ${lngFormatted}`;
@@ -1965,7 +1936,6 @@
                     if (!event) return;
 
                     const { title, date, time, location, artist } = event;
- // Google需要YYYYMMDDTHHMMSS格式
                     const start = date.replace(/-/g, '') + 'T' + time.replace(/:/g, '') + '00';
                     const endDateObj = new Date(new Date(`${date}T${time}`).getTime() + 3*60*60*1000);
                     const endHours = String(endDateObj.getHours()).padStart(2, '0');
@@ -2019,9 +1989,6 @@
                         const data = JSON.parse(importJson.value);
  if (Array.isArray(data)) {
                             const newEvts = data.map(d => {
-                                // 處理欄位名稱兼容性
-                                
- 
                                 let title = d.title || d['活動名稱'] || '未命名活動';
                                 let artist = d.artist || d['歌手'] || '';
                       
@@ -2040,18 +2007,13 @@
                 let formattedDate = new Date().toISOString().split('T')[0];
                                 if (rawDate) {
                                     const str = String(rawDate).trim();
- // 230422 -> 2023-04-22
                                     if (/^\d{6}$/.test(str)) formattedDate = `20${str.substring(0, 2)}-${str.substring(2, 4)}-${str.substring(4, 6)}`;
- // 20230422 -> 2023-04-22
                                     else if (/^\d{8}$/.test(str)) formattedDate = `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
- // 2023/04/22 or 2023-04-22
                                     else if (str.includes('-') || str.includes('/')) formattedDate = str.replace(/\//g, '-');
  }
                                 
                                 let expenses = [];
- // 兼容舊的 price 或直接使用 expenses 陣列
                                 if (d.expenses && Array.isArray(d.expenses)) {
-                                     // 兼容 JSON 內使用中文（項目/金額）或英文（item/amount）
                    
  
                                     expenses = d.expenses.map(exp => ({
@@ -2062,7 +2024,6 @@
                                     
  })).filter(exp => exp.amount > 0);
                                 } else {
-                                    // 兼容舊的 price 欄位
                                     let price = d.price ||
  d['票價'] || d['金額'] || 0;
                                     if (price > 0) expenses.push({ item: '門票', amount: price });
@@ -2087,7 +2048,7 @@
                     // 檢查檔案大小，限制在 1MB (1024 * 1024 bytes)
                     if (file.size > 1024 * 1024) {
                         alert('檔案大小超過 1MB 限制，請選擇更小的圖片。');
-                        event.target.value = ''; // 清除檔案選擇
+                        event.target.value = ''; 
                         if (type === 'event') form.value.coverUrl = '';
                         else if (type === 'fandom') fandomForm.value.coverUrl = '';
                         return;
@@ -2107,7 +2068,6 @@
                         alert('讀取圖片失敗，請重試。');
                     };
                     
-                    // 開始將檔案讀取為 Data URL (Base64)
                     reader.readAsDataURL(file);
                 };
                 
@@ -2133,7 +2093,7 @@
                     downloadBackup, restoreBackup, idolNagging, showCalendarOptions, addToiCal, addToGoogleCalendar, showTicket, getTicketPrice, updateAppTitle,
                     isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut, getBirthdayCongrats, 
  getDebutCongrats,
-                    handleFileUpload // 暴露新的檔案上傳函數
+                    handleFileUpload 
                 };
  }
         }).mount('#app');
