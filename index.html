@@ -1027,12 +1027,12 @@
                     id: null, title: '', artist: '', date: '', time: '19:00', location: '', 
                     seat: '', color: '#63b3b0', expenses: [], checklist: [], memo: '', lat: null, lng: null,
                     coverUrl: '', sticker: '',
-                    useUrl: false // NEW: 預設使用檔案上傳
+                    useUrl: false
                 };
                 const form = ref({ ...defaultForm });
                 const presetColors = ['#63b3b0', '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#1dd1a1'];
                 const customTitle = ref(localStorage.getItem('appTitle') || '追星日記 ✨');
-                const appVersion = ref('v1.0.0');
+                const appVersion = ref('v1.0.4'); // 更新版本號
                 
                 // --- FANDOM STATES ---
                 const fandoms = ref(JSON.parse(localStorage.getItem('fandomFandoms') || '[]'));
@@ -1045,12 +1045,17 @@
                     coverUrl: '',
                     birthday: '',
                     debutDate: '',
-                    useUrl: false // NEW: 預設使用檔案上傳
+                    useUrl: false
                 };
                 const fandomForm = ref({...defaultFandomForm});
                 // --- END FANDOM STATES ---
 
                 const changelogContent = ref([ 
+                    { version: 'v1.0.4', date: '2025/12/08', items: [
+                        '新增封面圖片上傳彈性：行程與紀念日表單支援 Base64 檔案上傳（限制 1MB）或貼上圖片 URL 兩種模式。',
+                        '優化 Base64 圖片預覽與清除邏輯。',
+                        '修正儲存行程/紀念日時，移除非儲存需要的臨時狀態變數（如 useUrl）。',
+                    ] },
                     { version: 'v1.0.3', date: '2025/12/06', items: [
                         '優化入坑紀念日卡片排版：將偶像名稱/Emoji和編輯按鈕移到圖片下方，確保所有內容不被圖片疊蓋。',
                         '修正出道日計算邏輯：現在同時顯示「出道年數」和「距離下一個紀念日倒數天數」。',
@@ -1818,7 +1823,7 @@
                     }
                 };
                 
-                // NEW: Base64 檔案上傳處理函數
+                // Base64 檔案上傳處理函數
                 const handleFileUpload = (event, type) => {
                     const file = event.target.files[0];
                     if (!file) return;
