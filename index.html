@@ -308,7 +308,6 @@
                               
                                 <div class="flex items-center gap-2 truncate pr-2">
                                     <i class="ph ph-map-pin shrink-0" :style="{ color: getEventColor(event) }"></i>
-     
                                     <span class="truncate">{{ event.location }}</span>
                                 </div>
 
@@ -325,7 +324,6 @@
                                         <i class="ph ph-navigation-arrow text-sm"></i> 導航
                                     </a>
                       
-     
                                 </div>
                                 
                                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-slate-100">
@@ -584,40 +582,11 @@
                 </div>
                 
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-center mb-4">
-     
-           
-                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                            <i class="ph ph-map-pin text-primary" :style="{ color: themeColor }"></i> 熱門足跡統計
-                        </h3>
-      
-                    </div>
-      
-                    <div v-if="statsData.topLocations.length > 0" class="space-y-3">
-                        <div v-for="(location, index) in statsData.topLocations" :key="index" class="flex justify-between items-center text-sm border-b border-slate-50 pb-2 last:border-0">
-                       
-                            <span class="text-sm text-slate-600 truncate flex-1 pr-2 font-medium">
-           
-                                <span class="inline-block w-5 text-center mr-1 text-slate-400">#{{index+1}}</span>
-                                {{ location.name }}
-              
-                            </span>
-            
-                            <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full">{{ location.count }} 次</span>
-                        </div>
-                    </div>
-  
-                   <div v-else class="text-center text-slate-400 text-sm py-4">無地點資料</div>
-     
-                </div>
-                
-                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-start mb-4"><h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就</h3></div>
+                    <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="ph ph-trophy text-blue-500"></i> 大型演出/全勤成就</h3></div>
                   
                     <p class="text-xs text-slate-400 mb-3 bg-slate-50 p-2 rounded-lg"><i class="ph ph-info"></i> 已排除：簽售會、事前錄製、錄製等行程</p>
                     <div v-if="statsData.series.length > 0" class="space-y-3">
                         <div v-for="item in statsData.series" :key="item.title" class="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0"><span class="text-sm text-slate-600 truncate flex-1 pr-2 font-medium">{{ item.title }}</span><span class="text-white text-xs font-bold px-2 py-1 rounded-full" :style="{ backgroundColor: themeColor }">{{ item.count }} 場</span></div>
-         
                     </div>
                     <div v-else class="text-center text-slate-400 text-sm py-4">區間內無資料</div>
                 </div>
@@ -838,18 +807,31 @@
                         <div><label class="block text-sm font-medium text-slate-500 mb-1">代表貼紙 (Emoji)</label><input v-model="fandomForm.sticker" type="text" placeholder="✨" maxlength="3" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800 text-xl text-center"></div>
 
                             <div>
-                                <label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 (Base64, 選填)</label>
+                                <label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 (選填)</label>
+                                
                                 <div v-if="fandomForm.coverUrl" class="mb-3">
                                     <img :src="fandomForm.coverUrl" alt="封面預覽" class="w-full h-32 object-cover rounded-xl shadow-md border border-slate-100">
-                                    <button @click="fandomForm.coverUrl = ''" class="mt-1 text-red-500 hover:text-red-600 text-xs font-medium flex items-center gap-1">
+                                    <button @click="fandomForm.coverUrl = ''; fandomForm.useUrl = false" class="mt-1 text-red-500 hover:text-red-600 text-xs font-medium flex items-center gap-1">
                                         <i class="ph ph-x-circle-fill"></i> 清除圖片
                                     </button>
                                 </div>
-                                <label v-else class="w-full py-3 bg-slate-50 text-slate-500 text-sm rounded-xl border-2 border-dashed border-slate-300 hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2">
-                                    <i class="ph ph-image-square text-lg"></i> 選擇圖片檔案 (小於 1MB)
-                                    <input type="file" @change="handleFileUpload($event, 'fandom')" accept="image/*" class="hidden">
-                                </label>
-                                <p class="text-xs text-slate-400 mt-1">上傳圖片檔案，將其轉換為 Base64 儲存。</p>
+
+                                <div v-else>
+                                    <div v-if="fandomForm.useUrl" class="relative">
+                                        <i class="ph ph-link absolute left-3 top-3.5 text-slate-400"></i>
+                                        <input v-model="fandomForm.coverUrl" type="text" placeholder="貼上圖片 URL..." class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800">
+                                    </div>
+                                    
+                                    <label v-else class="w-full py-3 bg-slate-50 text-slate-500 text-sm rounded-xl border-2 border-dashed border-slate-300 hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2">
+                                        <i class="ph ph-image-square text-lg"></i> 選擇圖片檔案 (Base64, < 1MB)
+                                        <input type="file" @change="handleFileUpload($event, 'fandom')" accept="image/*" class="hidden">
+                                    </label>
+
+                                    <button @click="fandomForm.useUrl = !fandomForm.useUrl; fandomForm.coverUrl = ''" class="mt-2 text-xs font-medium text-slate-500 hover:text-slate-700 underline">
+                                        {{ fandomForm.useUrl ? '改為上傳 Base64 圖片' : '改為貼上圖片 URL' }}
+                                    </button>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1">建議使用橫式圖片。</p>
                             </div>
                             <hr class="border-slate-100 my-2">
 
@@ -887,17 +869,30 @@
                             <div><label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label><input v-model="form.title" type="text" placeholder="例如: 2024 世界巡迴演唱會" class="w-full bg-slate-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-primary/50 text-slate-800"></div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 (Base64)</label>
+                                <label class="block text-sm font-medium text-slate-500 mb-1">封面圖片 (選填)</label>
+                                
                                 <div v-if="form.coverUrl" class="mb-3">
                                     <img :src="form.coverUrl" alt="封面預覽" class="w-full h-32 object-cover rounded-xl shadow-md border border-slate-100">
-                                    <button @click="form.coverUrl = ''" class="mt-1 text-red-500 hover:text-red-600 text-xs font-medium flex items-center gap-1">
+                                    <button @click="form.coverUrl = ''; form.useUrl = false" class="mt-1 text-red-500 hover:text-red-600 text-xs font-medium flex items-center gap-1">
                                         <i class="ph ph-x-circle-fill"></i> 清除圖片
                                     </button>
                                 </div>
-                                <label v-else class="w-full py-3 bg-slate-50 text-slate-500 text-sm rounded-xl border-2 border-dashed border-slate-300 hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2">
-                                    <i class="ph ph-image-square text-lg"></i> 選擇圖片檔案 (小於 1MB)
-                                    <input type="file" @change="handleFileUpload($event, 'event')" accept="image/*" class="hidden">
-                                </label>
+
+                                <div v-else>
+                                    <div v-if="form.useUrl" class="relative">
+                                        <i class="ph ph-link absolute left-3 top-3.5 text-slate-400"></i>
+                                        <input v-model="form.coverUrl" type="text" placeholder="貼上圖片 URL..." class="w-full bg-slate-50 border-none rounded-xl p-3 pl-10 focus:ring-2 focus:ring-primary/50 text-slate-800">
+                                    </div>
+                                    
+                                    <label v-else class="w-full py-3 bg-slate-50 text-slate-500 text-sm rounded-xl border-2 border-dashed border-slate-300 hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2">
+                                        <i class="ph ph-image-square text-lg"></i> 選擇圖片檔案 (Base64, < 1MB)
+                                        <input type="file" @change="handleFileUpload($event, 'event')" accept="image/*" class="hidden">
+                                    </label>
+
+                                    <button @click="form.useUrl = !form.useUrl; form.coverUrl = ''" class="mt-2 text-xs font-medium text-slate-500 hover:text-slate-700 underline">
+                                        {{ form.useUrl ? '改為上傳 Base64 圖片' : '改為貼上圖片 URL' }}
+                                    </button>
+                                </div>
                                 <p class="text-xs text-slate-400 mt-1">上傳圖片檔案，將其轉換為 Base64 儲存，豐富你的行程卡片！</p>
                             </div>
                             <div class="grid grid-cols-[1fr,60px] gap-3">
@@ -945,8 +940,6 @@
                     </div>
                     <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
                         <button @click="saveEvent" :style="{ backgroundColor: themeColor }" class="w-full text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform">儲存</button>
-   
-           
                     </div>
                 </div>
             </div>
@@ -1033,7 +1026,8 @@
                 const defaultForm = {
                     id: null, title: '', artist: '', date: '', time: '19:00', location: '', 
                     seat: '', color: '#63b3b0', expenses: [], checklist: [], memo: '', lat: null, lng: null,
-                    coverUrl: '', sticker: ''
+                    coverUrl: '', sticker: '',
+                    useUrl: false // NEW: 預設使用檔案上傳
                 };
                 const form = ref({ ...defaultForm });
                 const presetColors = ['#63b3b0', '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#1dd1a1'];
@@ -1051,6 +1045,7 @@
                     coverUrl: '',
                     birthday: '',
                     debutDate: '',
+                    useUrl: false // NEW: 預設使用檔案上傳
                 };
                 const fandomForm = ref({...defaultFandomForm});
                 // --- END FANDOM STATES ---
@@ -1086,13 +1081,14 @@
                 const openFandomModal = () => {
                     isFandomEditing.value = false;
                     editFandomIndex.value = null;
-                    fandomForm.value = {...defaultFandomForm, date: new Date().toISOString().split('T')[0]};
+                    fandomForm.value = {...defaultFandomForm, date: new Date().toISOString().split('T')[0], useUrl: false};
                     showFandomModal.value = true;
                 };
                 const editFandom = (fandom, index) => {
                     isFandomEditing.value = true;
                     editFandomIndex.value = index;
                     fandomForm.value = JSON.parse(JSON.stringify(fandom));
+                    fandomForm.value.useUrl = (fandom.coverUrl && !fandom.coverUrl.startsWith('data:')) || false;
                     showFandomModal.value = true;
                 };
 
@@ -1135,10 +1131,13 @@
                         return alert('錯誤：出道日期格式無效！請使用 YYYY-MM-DD 格式。');
                     }
 
+                    const fandomToSave = JSON.parse(JSON.stringify(fandomForm.value));
+                    delete fandomToSave.useUrl;
+
                     if(isFandomEditing.value && editFandomIndex.value !== null) {
-                        fandoms.value[editFandomIndex.value] = JSON.parse(JSON.stringify(fandomForm.value));
+                        fandoms.value[editFandomIndex.value] = fandomToSave;
                     } else {
-                        fandoms.value.push(JSON.parse(JSON.stringify(fandomForm.value)));
+                        fandoms.value.push(fandomToSave);
                     }
                     saveFandoms();
                     closeFandomModal();
@@ -1570,7 +1569,7 @@
                 const updateCustomTheme = (e) => setTheme(e.target.value);
                 const openModal = () => {
                     isEditing.value = false;
-                    form.value = { ...defaultForm, date: new Date().toISOString().split('T')[0], color: themeColor.value, expenses: [{item:'門票', amount:''}], checklist:[], memo:'' };
+                    form.value = { ...defaultForm, date: new Date().toISOString().split('T')[0], color: themeColor.value, expenses: [{item:'門票', amount:''}], checklist:[], memo:'', useUrl: false };
                     searchError.value = '';
                     showModal.value = true;
                 };
@@ -1585,6 +1584,7 @@
                         coverUrl: evt.coverUrl || '',
                         sticker: evt.sticker || ''
                     };
+                    form.value.useUrl = (evt.coverUrl && !evt.coverUrl.startsWith('data:')) || false;
                     searchError.value = '';
                     showModal.value = true;
                 };
@@ -1596,11 +1596,14 @@
                     form.value.checklist = form.value.checklist.filter(c => c.text && c.text.trim() !== '');
                     if (form.value.color === themeColor.value) form.value.color = '';
 
+                    const eventToSave = JSON.parse(JSON.stringify(form.value));
+                    delete eventToSave.useUrl;
+
                     if (isEditing.value) {
                         const idx = events.value.findIndex(e => e.id === form.value.id);
-                        if (idx !== -1) events.value[idx] = { ...form.value };
+                        if (idx !== -1) events.value[idx] = eventToSave;
                     } else {
-                        events.value.push({ ...form.value, id: Date.now().toString() });
+                        events.value.push({ ...eventToSave, id: Date.now().toString() });
                     }
                     closeModal();
                 };
