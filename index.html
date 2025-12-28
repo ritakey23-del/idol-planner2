@@ -55,9 +55,32 @@
             width: 100vw;
             overflow: hidden;
         }
+/* 彈窗專用的滾動容器 */
+.custom-popup-scroll {
+    max-height: 150px;
+    overflow-y: auto !important;
+    padding-right: 8px;
+}
 
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* 強制顯示精緻的捲軸 */
+.custom-popup-scroll::-webkit-scrollbar {
+    width: 6px;
+    display: block !important; /* 確保不被全域隱藏設定覆蓋 */
+}
+
+/* 捲軸軌道 */
+.custom-popup-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+/* 捲軸拉條 */
+.custom-popup-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1; /* 淺灰色，提示效果明顯 */
+    border-radius: 10px;
+    border: 1px solid #f1f5f9;
+}
+
 
         .expand-enter-active, .expand-leave-active { transition: all 0.3s ease-in-out; max-height: 800px; opacity: 1; }
         .expand-enter-from, .expand-leave-to { max-height: 0; opacity: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
@@ -108,6 +131,7 @@
             cursor: pointer;
         }
     </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body class="text-slate-700 antialiased selection:bg-primary selection:text-white flex flex-col">
 
@@ -307,10 +331,16 @@
        
             
                               
-                                <div class="flex items-center gap-2 truncate pr-2">
-                                    <i class="ph ph-map-pin shrink-0" :style="{ color: getEventColor(event) }"></i>
-                                    <span class="truncate">{{ event.location }}</span>
-                                </div>
+                               <div class="flex items-center gap-2 truncate pr-2">
+    <i class="ph ph-map-pin shrink-0" :style="{ color: getEventColor(event) }"></i>
+    <span class="truncate">{{ event.location }}</span>
+    
+    <span v-if="!event.lat || !event.lng" 
+          class="bg-red-50 text-red-500 text-[10px] px-1.5 py-0.5 rounded-md font-bold flex items-center gap-0.5 border border-red-100 animate-pulse">
+        <i class="ph ph-warning-circle"></i> 未定位
+    </span>
+</div>
+
 
                         
           
@@ -528,33 +558,53 @@
 
             <div v-show="activeTab === 'map'" class="w-full h-full relative">
                 <div id="map-container" class="w-full h-full bg-slate-200"></div>
-                <div class="absolute top-4 left-4 right-4 z-30 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-slate-100">
-    <div class="flex justify-between items-center">
-        <div>
-            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+<div class="absolute top-4 left-4 right-4 z-30 bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-slate-100">
+    <div class="flex justify-between items-start">
+        <div class="flex flex-col gap-1.5 flex-1 min-w-0">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                 <i class="ph ph-map-trifold text-primary"></i> 追星足跡
             </h3>
-            <p class="text-xs text-slate-500 mt-1">
-                已解鎖 {{ mappedEventsCount }} 個地點
-                <span v-if="missingCoordsCount > 0" class="text-orange-500 ml-1">
-                    ({{ missingCoordsCount }} 個待定位) 
-                </span>
-            </p>
-        </div>
-        <div class="text-right">
-            <div class="text-xl font-bold" :style="{ color: themeColor }">
-                {{ totalDistance }} <span class="text-xs font-normal text-slate-400">km</span>
+            
+            <div class="flex items-center gap-2">
+                <div class="relative shrink-0">
+                    <select v-model="selectedMapYear" @change="initMap" 
+                            class="appearance-none bg-slate-100 border-none text-slate-700 py-1 px-2 pr-6 rounded-lg text-[10px] font-bold focus:ring-1 focus:ring-primary">
+                        <option value="ALL">全部年度</option>
+                        <option v-for="year in availableYears" :key="year" :value="year">{{ year }} 年</option>
+                    </select>
+                    <i class="ph ph-caret-down absolute right-1.5 top-1.5 text-[8px] pointer-events-none opacity-50"></i>
+                </div>
+                
+<div class="truncate text-[10px] text-slate-500">
+    已征戰 {{ filteredMapEventsCount }} 個場館
+                    <span v-if="missingCoordsCount > 0" class="text-orange-500">
+                        ({{ missingCoordsCount }} 待定位)
+                    </span>
+                </div>
             </div>
-            <div class="text-[10px] text-slate-400 font-medium">累計征戰里程</div>
+        </div>
+
+        <div class="text-right shrink-0 border-l border-slate-100 pl-3 ml-1">
+            <div class="text-lg font-bold leading-none" :style="{ color: themeColor }">
+                {{ totalDistance }} <span class="text-[10px] font-normal text-slate-400">km</span>
+            </div>
+            <div class="text-[9px] text-slate-400 font-medium mt-1">累積里程</div>
         </div>
     </div>
 </div>
+
    </div> <div v-if="activeTab === 'stats'" class="space-y-6 p-5 pb-32">
                  <div class="flex justify-between items-center mb-2">
-                   
-                    <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
-                    <button @click="showImportModal = true" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90"><i class="ph ph-download-simple text-lg"></i> 匯入</button>
-                </div>
+    <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
+    <div class="flex gap-2">
+        <button @click="generateShareCard" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
+            <i class="ph ph-share-network text-lg"></i> 分享
+        </button>
+        <button @click="showImportModal = true" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
+            <i class="ph ph-download-simple text-lg"></i> 匯入
+        </button>
+    </div>
+</div>
                 <div class="space-y-4">
                  
                     <div class="relative">
@@ -607,7 +657,65 @@
                     <div v-else class="text-center text-slate-400 text-sm py-4">區間內無資料</div>
                 </div>
             </div>
-  
+
+<div id="share-card-template" class="fixed -left-[9999px] top-0 w-[375px] h-[667px] p-6 font-sans text-white overflow-hidden" 
+     :style="{ background: 'linear-gradient(135deg, ' + themeColor + ' 0%, #0f172a 100%)' }">
+    
+    <div class="backdrop-blur-2xl bg-white/10 rounded-[2rem] p-6 border border-white/20 shadow-2xl h-full flex flex-col relative overflow-hidden">
+        
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+
+        <div class="relative z-10 text-center mb-6">
+            <div class="text-[10px] tracking-[0.3em] text-white/40 uppercase mb-1">年度追星里程</div>
+            <h2 class="text-3xl font-black tracking-tight">{{ selectedYear === 'ALL' ? '追星足跡' : selectedYear + ' 年度回顧' }}</h2>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mb-6 relative z-10">
+            <div class="bg-black/20 rounded-2xl p-3 text-center border border-white/5">
+                <div class="text-[9px] text-white/40 mb-1">總場次</div>
+                <div class="text-xl font-bold">{{ statsData.count }}</div>
+            </div>
+            <div class="bg-black/20 rounded-2xl p-3 text-center border border-white/5">
+                <div class="text-[9px] text-white/40 mb-1">總場館</div>
+                <div class="text-xl font-bold">{{ filteredMapEventsCount }}</div>
+            </div>
+            <div class="bg-black/20 rounded-2xl p-3 text-center border border-white/5">
+                <div class="text-[9px] text-white/40 mb-1">總里程</div>
+                <div class="text-lg font-bold">{{ totalDistance }}<span class="text-[9px] ml-0.5">km</span></div>
+            </div>
+        </div>
+
+        <div class="w-full h-40 bg-black/30 rounded-2xl mb-6 overflow-hidden border border-white/10 relative">
+            <div id="map-snapshot" class="w-full h-full opacity-80"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+            <div class="absolute bottom-2 left-3 text-[9px] text-white/60 flex items-center gap-1">
+                <i class="ph ph-map-pin-line"></i> 足跡地圖實錄
+            </div>
+        </div>
+
+        <div class="w-full relative z-10 flex-1">
+            <div class="text-[10px] text-white/40 tracking-widest mb-3 flex items-center gap-2">
+                <i class="ph ph-crown-simple"></i> 年度本命排行榜
+            </div>
+            <div class="space-y-3">
+                <div v-for="(artist, index) in statsData.topArtists" :key="artist.name" class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-black italic opacity-20">0{{ index + 1 }}</span>
+                        <span class="text-xs font-bold tracking-wide">{{ artist.name }}</span>
+                    </div>
+                    <span class="text-[10px] opacity-60">{{ artist.count }} 次見面</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-white/5 text-center relative z-10">
+            <p class="text-[8px] opacity-20 tracking-[0.2em]">{{ customTitle }} • 自動生成</p>
+        </div>
+    </div>
+</div>
+
+
+
        </main>
 
         <button @click="openModal()" :style="{ backgroundColor: themeColor }"
@@ -1007,34 +1115,9 @@
         createApp({
             setup() {
 
-// 計算兩點間的球面距離 (Haversine 公式)
-const calculateKm = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // 地球半徑 (km)
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-};
-
-// 自動計算所有足跡的總里程 (按日期排序)
-const totalDistance = computed(() => {
-    const validPoints = [...events.value]
-        .filter(e => e.lat && e.lng)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    let dist = 0;
-    for (let i = 0; i < validPoints.length - 1; i++) {
-        dist += calculateKm(
-            validPoints[i].lat, validPoints[i].lng,
-            validPoints[i+1].lat, validPoints[i+1].lng
-        );
-    }
-    return dist.toFixed(1);
-});
 
                 const events = ref([]);
+                const selectedMapYear = ref('ALL');
                 const activeTab = ref('home');
                 const viewMode = ref('upcoming');
                 const themeColor = ref('#63b3b0'); 
@@ -1066,6 +1149,112 @@ const totalDistance = computed(() => {
                 const importJson = ref('');
                 let map = null;
                 let markers = [];
+
+const generateShareCard = async () => {
+    if (statsData.value.count === 0) {
+        alert("目前選定的區間沒有資料喔！");
+        return;
+    }
+
+    // 提示使用者
+    alert("正在同步地圖與數據，生成中...");
+    
+    // 關鍵：將實際地圖的 HTML 內容複製到快照區塊
+    const realMap = document.getElementById('map-container');
+    const snapshotContainer = document.getElementById('map-snapshot');
+    
+    // 清除舊快照並克隆目前的地圖外觀 (僅 CSS 模擬)
+    snapshotContainer.innerHTML = '';
+    const mapClone = realMap.cloneNode(true);
+    snapshotContainer.appendChild(mapClone);
+
+    await nextTick();
+    const element = document.getElementById('share-card-template');
+    
+    try {
+        const canvas = await html2canvas(element, {
+            backgroundColor: null,
+            scale: 2, // 2倍解析度最適合手機分享且不佔過多記憶體
+            useCORS: true,
+            allowTaint: true,
+            logging: false
+        });
+
+        // 針對 Safari 優化：轉換為 DataURL 後直接開啟新視窗或提示儲存
+        const imgData = canvas.toDataURL('image/png');
+        
+        // 建立一個臨時圖片顯示區，解決 Safari 無法下載問題
+        const newTab = window.open();
+        if (newTab) {
+            newTab.document.write(`<img src="${imgData}" style="width:100%; height:auto;" />`);
+            newTab.document.title = "長按圖片儲存分享到 Threads";
+        } else {
+            // 如果被擋住彈窗，則使用直接下載
+            const link = document.createElement('a');
+            link.download = `追星足跡_${selectedYear.value}.png`;
+            link.href = imgData;
+            link.click();
+        }
+    } catch (err) {
+        console.error("生成錯誤:", err);
+        alert("分享功能在當前瀏覽器受限，請嘗試使用 Chrome 或截圖功能。");
+    }
+};
+
+
+// 計算兩點間的球面距離 (Haversine 公式)
+const calculateKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // 地球半徑 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+
+// 新增：根據年份計算過濾後的點位數量
+const filteredMapEventsCount = computed(() => {
+    // 1. 先根據年度過濾資料
+    const target = selectedMapYear.value === 'ALL' 
+        ? events.value 
+        : events.value.filter(e => e.date && e.date.startsWith(selectedMapYear.value));
+
+    // 2. 建立一個 Set 來儲存唯一的經緯度組合字串
+    const uniqueLocations = new Set();
+    
+    target.forEach(e => {
+        if (e.lat && e.lng) {
+            // 將經緯度組合成字串作為 key，例如 "25.05_121.53"
+            uniqueLocations.add(`${e.lat}_${e.lng}`);
+        }
+    });
+
+    // 3. 回傳 Set 的大小，即為不重複的地點數量
+    return uniqueLocations.size;
+});
+
+
+// 更新：totalDistance 也要隨著年份變動
+const totalDistance = computed(() => {
+    const baseEvents = selectedMapYear.value === 'ALL' 
+        ? events.value 
+        : events.value.filter(e => e.date.startsWith(selectedMapYear.value));
+
+    const validPoints = [...baseEvents]
+        .filter(e => e.lat && e.lng)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let dist = 0;
+    for (let i = 0; i < validPoints.length - 1; i++) {
+        dist += calculateKm(
+            validPoints[i].lat, validPoints[i].lng,
+            validPoints[i+1].lat, validPoints[i+1].lng
+        );
+    }
+    return dist.toFixed(1);
+});
+
 
                 const defaultForm = {
                     id: null, title: '', artist: '', date: '', time: '19:00', location: '', 
@@ -1241,11 +1430,23 @@ const totalDistance = computed(() => {
                 watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
                 watch(themeColor, (newVal) => localStorage.setItem('idolTheme', newVal));
                 
-                watch(activeTab, (newTab) => {
-                    if (newTab === 'map') {
-                        nextTick(() => { initMap(); });
-                    }
-                });
+watch(customTitle, (newVal) => localStorage.setItem('appTitle', newVal));
+watch(events, (newVal) => localStorage.setItem('idolEvents', JSON.stringify(newVal)), { deep: true });
+watch(themeColor, (newVal) => localStorage.setItem('idolTheme', newVal));
+
+// 新增此段落：監聽地圖年份篩選
+watch(selectedMapYear, () => {
+    if (activeTab.value === 'map') {
+        nextTick(() => { initMap(); });
+    }
+});
+
+watch(activeTab, (newTab) => {
+    if (newTab === 'map') {
+        nextTick(() => { initMap(); });
+    }
+});
+
                 const adjustColor = (color, amount) => {
                     let hex = color.replace('#', '');
                     if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
@@ -1717,7 +1918,7 @@ const totalDistance = computed(() => {
                         } else {
                             form.value.lat = null;
                             form.value.lng = null;
-                            searchError.value = "找不到該地點的坐標，請嘗試更具體的名稱 (如: 台北小巨蛋)";
+                            searchError.value = "找不到該地點的坐標，請嘗試更具體的名稱 (如:KSPO DOME改成올림픽체조경기장)";
                         }
                     } catch (e) {
                         console.error("地圖定位錯誤:", e);
@@ -1734,56 +1935,59 @@ const totalDistance = computed(() => {
 const initMap = () => {
     if (!map) {
         map = L.map('map-container').setView([23.6978, 120.9605], 7);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-            attribution: '© OpenStreetMap' 
-        }).addTo(map);
-    } else { 
-        map.invalidateSize(); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    } else {
+        map.invalidateSize();
     }
 
-    // 清除舊標記與線條
+    // 關鍵：先清空舊的點與線
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
-    // 取得排序後的有效座標點
-    const sortedEvents = [...events.value]
+    // 根據選定年度過濾
+    const baseEvents = selectedMapYear.value === 'ALL' 
+        ? events.value 
+        : events.value.filter(e => e.date && e.date.startsWith(selectedMapYear.value));
+
+    const sortedEvents = [...baseEvents]
         .filter(e => e.lat && e.lng)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    const pathCoords = [];
-    
+    if (sortedEvents.length === 0) return;
+
+    // 重新畫點與畫線邏輯
+    const pathCoords = sortedEvents.map(e => [e.lat, e.lng]);
+    const groupPoints = {};
     sortedEvents.forEach(e => {
-        const color = getEventColor(e);
-        const marker = L.circleMarker([e.lat, e.lng], { 
-            radius: 7, 
-            fillColor: color, 
-            color: '#fff', 
-            weight: 2, 
-            fillOpacity: 0.8 
-        }).addTo(map);
-        
-        // 修正：在地圖 Popup 顯示日期
-        marker.bindPopup(`<b>${e.artist}</b><br>${e.title}<br>📅 ${e.date}`);
-        markers.push(marker);
-        
-        // 修正：必須存入座標，標線才能計算路徑
-        pathCoords.push([e.lat, e.lng]); 
+        const key = `${e.lat}_${e.lng}`;
+        if (!groupPoints[key]) groupPoints[key] = [];
+        groupPoints[key].push(e);
     });
 
-    // 繪製追星標線 (虛線效果)
+    Object.values(groupPoints).forEach(eventsAtLoc => {
+        const latest = eventsAtLoc[eventsAtLoc.length - 1];
+        const color = getEventColor(latest);
+        const marker = L.circleMarker([latest.lat, latest.lng], { radius: 7, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.8 }).addTo(map);
+        let popup = `<div class="custom-popup-scroll" style="min-width:150px;">`;
+        [...eventsAtLoc].reverse().forEach(ev => {
+            popup += `<div style="border-bottom:1px dashed #eee; margin-bottom:5px; padding-bottom:5px;">
+                <b style="color:${getEventColor(ev)}">${ev.artist}</b><br>
+                <small>${ev.title}</small><br>
+                <small style="color:#666">📅 ${ev.date}</small>
+            </div>`;
+        });
+        popup += `</div>`;
+        marker.bindPopup(popup);
+        markers.push(marker);
+    });
+
     if (pathCoords.length > 1) {
-        const polyline = L.polyline(pathCoords, {
-            color: themeColor.value,
-            weight: 3,
-            opacity: 0.6,
-            dashArray: '10, 15', 
-            lineJoin: 'round'
-        }).addTo(map);
+        const polyline = L.polyline(pathCoords, { color: themeColor.value, weight: 3, opacity: 0.6, dashArray: '10, 15' }).addTo(map);
         markers.push(polyline);
     }
-
     if (pathCoords.length > 0) map.fitBounds(pathCoords, { padding: [50, 50] });
 };
+
 
 
 
@@ -1969,7 +2173,7 @@ const initMap = () => {
                     isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut, getBirthdayCongrats, 
                     getDebutCongrats,
                     handleFileUpload, 
-totalDistance, 
+selectedMapYear, filteredMapEventsCount, totalDistance, generateShareCard, 
 
                 };
             }
@@ -1977,3 +2181,6 @@ totalDistance,
     </script>
 </body>
 </html>
+
+
+
