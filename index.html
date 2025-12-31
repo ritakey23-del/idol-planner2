@@ -610,14 +610,17 @@
     </button>
 </div>
 
-<div id="share-template" style="position: fixed; top: -9999px; left: -9999px; width: 375px; padding: 25px; border-radius: 30px; z-index: -1;" :style="{ background: '#f8fafc' }">
+<div id="share-template" style="position: fixed;
+top: -9999px; left: 0; width: 375px; padding: 30px; border-radius: 0px;
+z-index: -1; display: flex; flex-direction: column;" :style="{ background: '#f8fafc' }">
+
     
-    <div class="text-center mb-5">
+    <div class="text-center mb-2">
         <h1 class="text-xl font-bold text-slate-800" style="margin-bottom: 2px;">{{ selectedYear === 'ALL' ? '追星全紀錄回顧' : selectedYear + ' 年度回顧' }}</h1>
         <p class="text-[9px] text-slate-500 tracking-widest uppercase">追星足跡由 ✨ 為您珍藏 ✨</p>
     </div>
 
-<div class="p-2.5 rounded-2xl shadow-md mb-4 text-center flex items-center justify-center h-auto py-5" :style="{ backgroundColor: themeColor }">
+<div class="px-3 py-1 rounded-2xl shadow-md mb-1 text-center flex items-center justify-center h-auto pt-2" :style="{ backgroundColor: themeColor }">
     <div class="text-white font-bold italic text-xs leading-relaxed whitespace-pre-line" style="margin: 0 auto; max-width: 90%;">
         "{{ emotionalSummary }}"
     </div>
@@ -625,37 +628,37 @@
 
     <div class="space-y-3.5">
 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-    <h3 class="text-lg font-black text-slate-700 mb-5 uppercase tracking-tighter border-b pb-2 inline-block mx-auto">🏆 年度成就</h3>
+    <h3 class="text-lg font-black text-slate-700 mb-2 uppercase tracking-tighter border-b pb-2 inline-block mx-auto">🏆 年度成就</h3>
     
     <div class="flex flex-wrap justify-between items-start text-slate-600">
         
-        <div class="flex-1 min-w-[45%] mb-3 leading-tight text-[12px]">
+        <div class="flex-1 min-w-[45%] mb-2 pt-1 leading-tight text-[12px]">
             今年看了
-            <div class="text-xl font-black my-0.5" :style="{ color: themeColor }">{{ statsData.count }}</div>
+            <div class="text-xl font-black my-0" :style="{ color: themeColor }">{{ statsData.count }}</div>
             場演唱會
         </div>
 
-        <div class="flex-1 min-w-[45%] mb-3 leading-tight text-[12px]">
+        <div class="flex-1 min-w-[45%] mb-2 pt-1 leading-tight text-[12px]">
             跨越
-            <div class="text-xl font-black my-0.5" :style="{ color: themeColor }">{{ totalDistance }}</div>
+            <div class="text-xl font-black my-0" :style="{ color: themeColor }">{{ totalDistance }}</div>
             公里的距離
         </div>
 
-        <div v-if="statsData.topArtists.length > 0" class="flex-1 min-w-[45%] pt-4 border-t border-dashed border-slate-100 leading-tight text-[12px]">
-            與 <br>
+        <div v-if="statsData.topArtists.length > 0" class="flex-1 min-w-[45%] pt-2 border-t border-dashed border-slate-100 leading-tight text-[12px]">
+            與
 <span class="text-xl font-black" :style="{ color: themeColor }">{{ statsData.topArtists[0].name }}</span> <br>
             共創 <span class="text-xl font-black" :style="{ color: themeColor }">{{ statsData.topArtists[0].count }}</span> 
             場回憶
         </div>
 
         <div v-if="statsData.topLocations.length > 0" class="flex-1 min-w-[45%] pt-4 border-t border-dashed border-slate-100 leading-tight text-[10px]">
-            最常出沒在 <br><span class="text-xl font-black" :style="{ color: themeColor }">{{ statsData.topLocations[0].name }}</span>
+            你最常跑去 <br><span class="text-xl font-black" :style="{ color: themeColor }">{{ statsData.topLocations[0].name }}</span>
         </div>
         
     </div>
 </div>
 
-<div class="w-full p-2.5 rounded-xl text-center" :style="{ backgroundColor: themeColor + '15' }">
+<div class="w-full px-3 py-1 rounded-xl text-center" :style="{ backgroundColor: themeColor + '15' }">
     <div class="font-bold text-xs w-full whitespace-pre-line" 
          :style="{ color: adjustColor ? adjustColor(themeColor, -40) : themeColor }" 
          style="line-height: 1.6; padding: 0 5px;">
@@ -664,12 +667,12 @@
 </div>
 
 <div v-if="statsData.series.length > 0" class="bg-white p-4 rounded-2xl border border-slate-100 text-center pb-6">
-     <h3 class="text-lg font-black text-slate-700 mb-5 uppercase tracking-tighter border-b pb-2 inline-block mx-auto">🎬 好看一直看</h3>
+     <h3 class="text-lg font-black text-slate-700 mb-2 uppercase tracking-tighter border-b pb-2 inline-block mx-auto">🎬 好看一直看</h3>
     
     <div class="flex justify-between gap-2">
 <div v-for="(item, idx) in statsData.series.slice(0, 3)" :key="item.title" 
-     class="flex-1 bg-slate-50 p-2 rounded-xl flex flex-col items-center justify-start text-center">
-    <div class="mb-1 text-xl">
+     class="flex-1 bg-slate-50 pt-2 pb-6 px-2 rounded-xl flex flex-col items-center justify-start text-center">
+    <div class="mb-2 text-2xl">
         <span v-if="idx === 0">🥇</span>
         <span v-else-if="idx === 1">🥈</span>
         <span v-else-if="idx === 2">🥉</span>
@@ -689,11 +692,6 @@
         <div style="height: 10px;"></div>
     </div>
 </div>
-
-
-
-
-
 
 
 
@@ -1318,11 +1316,17 @@ const totalDistance = computed(() => {
 
                 const changelogContent = ref([ 
 
-{ version: 'v1.0.5', date: '2025/12/28', items: [
-    '新增地圖「追星里程」自動計算，累計所有行程間的移動距離。',
-    '優化地圖 UI 佈局，防止縮放按鈕與資訊卡片重疊。',
-    '新增地圖路徑標線繪製，直觀呈現追星歷史足跡。'
-] },
+{ 
+    version: 'v1.0.5', 
+    date: '2025/12/28', 
+    items: [
+        '新增地圖「追星里程」自動計算，累計所有行程間的移動距離。',
+        '新增追星成就「分享長圖」功能，一鍵生成年度回顧美圖。',
+        '新增年度追星預算設定與首頁進度條提醒。',
+        '優化地圖 UI 佈局與年度篩選功能，並繪製歷史足跡標線。',
+        '精細化隱私模式：可獨立切換首頁支出、行程細節與統計數據的金額屏蔽。'
+    ] 
+},
                     { version: 'v1.0.4', date: '2025/12/08', items: [
                         '新增封面圖片上傳彈性：行程與紀念日表單支援 Base64 檔案上傳（限制 1MB）或貼上圖片 URL 兩種模式。',
                         '優化 Base64 圖片預覽與清除邏輯。',
@@ -2307,21 +2311,31 @@ const generateShareImage = () => {
     const element = document.getElementById('share-template');
     if (!element) return;
 
-    // 移除 alert 改用 console 紀錄或直接執行，避免手機系統彈窗衝突
     console.log("正在生成圖片...");
 
     html2canvas(element, {
         useCORS: true,
-        scale: 3, 
+        scale: 2,               // 建議設為 2，避免手機上圖檔過大下載失敗
         backgroundColor: '#f8fafc',
-        letterRendering: true,
+        windowWidth: 375,       // 鎖定模擬視窗寬度
+        width: 375,             // 鎖定擷取範圍寬度
+        x: 0,                   // 強制從水平 0 的位置開始抓取
+        y: 0,                   // 強制從垂直 0 的位置開始抓取
+        scrollX: 0,
+        scrollY: 0,
         onclone: (clonedDoc) => {
             const clonedElement = clonedDoc.getElementById('share-template');
+            // 關鍵：在克隆的文件中將其置頂、靠左，並消除任何外距
+            clonedElement.style.position = 'fixed';
             clonedElement.style.top = '0';
             clonedElement.style.left = '0';
-            clonedElement.style.position = 'relative';
+            clonedElement.style.margin = '0';
+            clonedElement.style.padding = '30px'; // 保持你原本的內距
+            clonedElement.style.display = 'flex';
         }
     }).then(canvas => {
+
+
         canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -2375,6 +2389,8 @@ selectedMapYear, filteredMapEventsCount, totalDistance, isYearlyPrivacy, isEvent
     </script>
 </body>
 </html>
+
+
 
 
 
