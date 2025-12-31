@@ -11,6 +11,7 @@
     <meta property="og:description" content="追星族必備！紀錄所有偶像活動、演唱會門票支出、地圖足跡，不再錯過任何一個重要瞬間。">
     <meta property="og:type" content="website">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -57,29 +58,27 @@
         }
 /* 彈窗專用的滾動容器 */
 .custom-popup-scroll {
-    max-height: 150px;
     overflow-y: auto !important;
-    padding-right: 8px;
+    scrollbar-width: thin; /* Firefox 縮小捲軸 */
+    scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
-/* 強制顯示精緻的捲軸 */
+/* Chrome/Safari 縮小捲軸 */
 .custom-popup-scroll::-webkit-scrollbar {
-    width: 6px;
-    display: block !important; /* 確保不被全域隱藏設定覆蓋 */
+    width: 4px; /* 從 6px 縮小到 4px */
+    display: block !important;
 }
 
-/* 捲軸軌道 */
 .custom-popup-scroll::-webkit-scrollbar-track {
     background: #f1f5f9;
     border-radius: 10px;
 }
 
-/* 捲軸拉條 */
 .custom-popup-scroll::-webkit-scrollbar-thumb {
-    background: #cbd5e1; /* 淺灰色，提示效果明顯 */
+    background: #cbd5e1;
     border-radius: 10px;
-    border: 1px solid #f1f5f9;
 }
+
 
 
         .expand-enter-active, .expand-leave-active { transition: all 0.3s ease-in-out; max-height: 800px; opacity: 1; }
@@ -155,26 +154,33 @@
                 </div>
             </div>
             
-            <div class="flex gap-3 mt-1" v-if="activeTab === 'home'">
-                <div :class="isThemeColorLight ?
-                    'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2.5 flex-1 text-center">
-                    <div :class="isThemeColorLight ?
-                        'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">倒數中</div>
-                    <div class="text-lg font-bold">{{ upcomingCount }} <span class="text-xs font-normal">場</span></div>
-                </div>
-                <div :class="isThemeColorLight ?
-                    'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2.5 flex-1 text-center relative group">
-                    <div :class="isThemeColorLight ?
-                        'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">年度花費</div>
-                   <div class="text-lg font-bold">
-    {{ isYearlyPrivacy ? '****' : '$' + formatMoney(currentYearExpense) }}
-</div>
-<button @click="isYearlyPrivacy = !isYearlyPrivacy" class="absolute top-1.5 right-1.5">
-    <i class="ph" :class="isYearlyPrivacy ? 'ph-eye-slash' : 'ph-eye'"></i>
-</button>
+<div class="flex gap-2 mt-1" v-if="activeTab === 'home'">
+    <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2 flex-1 text-center h-13 flex flex-col justify-start pt-1.5">
+        <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">倒數中</div>
+        <div class="text-base font-bold leading-none">{{ upcomingCount }} 場</div>
+    </div>
 
-                </div>
+    <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2 flex-1 text-center h-13 flex flex-col justify-start pt-1.5 relative">
+        <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-0.5">年支出</div>
+        <div class="text-base font-bold leading-none">{{ isYearlyPrivacy ? '****' : formatMoney(currentYearExpense) }}</div>
+        <button @click="isYearlyPrivacy = !isYearlyPrivacy" class="absolute top-1 right-1 opacity-50 p-1">
+            <i class="ph text-[10px]" :class="isYearlyPrivacy ? 'ph-eye-slash' : 'ph-eye'"></i>
+        </button>
+    </div>
+
+    <div :class="isThemeColorLight ? 'bg-black/10' : 'bg-white/20'" class="backdrop-blur-md rounded-xl p-2 flex-1 text-center h-13 flex flex-col justify-start pt-1.5">
+        <div :class="isThemeColorLight ? 'text-slate-600' : 'text-white/80'" class="text-[10px] mb-1">預算已使用..</div>
+        <div class="px-1">
+            <div class="w-full h-1 bg-black/10 rounded-full overflow-hidden mb-1">
+                <div class="h-full bg-white transition-all duration-500" 
+                     :style="{ width: Math.min((currentYearExpense / yearlyBudget) * 100, 100) + '%' }"></div>
             </div>
+            <div class="text-[8px] font-medium leading-none truncate" :style="{ color: isThemeColorLight ? '#475569' : '#f1f5f9' }">
+                {{ budgetNagging }}
+            </div>
+        </div>
+    </div>
+</div>
         </header>
 
         <main class="flex-1 overflow-y-auto no-scrollbar scroll-smooth w-full relative bg-slate-50">
@@ -367,7 +373,7 @@
                                         <span class="font-mono font-bold">
     {{ isEventPrivacy ? '****' : '$' + formatMoney(calculateTotal(event.expenses)) }}
 </span>
-<button @click.stop="isEventPrivacy = !isEventPrivacy" class="text-slate-400 hover:text-primary ml-1 p-1">
+<button @click.stop="isEventPrivacy = !isEventPrivacy" class="text-slate-400 hover:text-slate-500 ml-1 p-1 transition-colors">
     <i class="ph" :class="isEventPrivacy ? 'ph-eye-slash' : 'ph-eye'"></i>
 </button>
 
@@ -595,17 +601,97 @@
                  <div class="flex justify-between items-center mb-2">
                    
                     <h2 class="text-xl font-bold text-slate-800">追星儀表板 📊</h2>
-                    <button @click="showImportModal = true" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90"><i class="ph ph-download-simple text-lg"></i> 匯入</button>
+<div class="flex gap-2">
+    <button @click="generateShareImage" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
+        <i class="ph ph-share-network text-lg"></i> 分享
+    </button>
+    <button @click="showImportModal = true" :style="{ backgroundColor: themeColor }" class="text-xs text-white px-4 py-2 rounded-full flex items-center gap-1 shadow-sm active:scale-95 transition-transform hover:opacity-90">
+        <i class="ph ph-download-simple text-lg"></i> 匯入
+    </button>
+</div>
+
+<div id="share-template" style="position: fixed; top: -9999px; left: -9999px; width: 375px; padding: 30px; border-radius: 30px; z-index: -1;" :style="{ background: '#f8fafc' }">
+    
+    <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold text-slate-800" style="margin-bottom: 4px;">{{ selectedYear === 'ALL' ? '追星全紀錄回顧' : selectedYear + ' 年度回顧' }}</h1>
+        <p class="text-[10px] text-slate-500 tracking-widest uppercase">追星足跡由 ✨ 為您珍藏 ✨</p>
+    </div>
+
+    <div class="p-5 rounded-2xl shadow-sm mb-6 text-center flex items-center justify-center min-h-[85px]" :style="{ backgroundColor: themeColor }">
+        <div class="text-white font-bold italic text-[10px] leading-relaxed" style="margin: 0 auto; max-width: 90%;">"{{ emotionalSummary }}"</div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 text-center">
+            <h3 class="text-xl font-black text-slate-700 mb-6 uppercase tracking-tighter border-b pb-2 inline-block mx-auto">🏆 年度成就</h3>
+            <div class="space-y-4 text-slate-600">
+                <div class="leading-tight text-sm">
+                    演出這一年你參與了<br>
+                    <div class="text-4xl font-black my-1" :style="{ color: themeColor }">{{ statsData.count }}</div>
+                    場
+                </div>
+                <div class="leading-tight text-sm">
+                    你跨越了<br>
+                    <div class="text-4xl font-black my-1" :style="{ color: themeColor }">{{ totalDistance }}</div>
+                    公里
+                </div>
+                <div v-if="statsData.topArtists.length > 0" class="leading-tight text-sm pt-4 border-t border-dashed border-slate-100">
+                    你與<br>
+                    <div class="text-3xl font-bold my-1" :style="{ color: themeColor }">{{ statsData.topArtists[0].name }}</div>
+                    共創了<br>
+                    <div class="text-3xl font-black my-1" :style="{ color: themeColor }">{{ statsData.topArtists[0].count }}</div>
+                    美好回憶
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full p-4 rounded-xl text-center" :style="{ backgroundColor: themeColor + '15' }">
+            <div class="font-bold text-[10px] w-full" :style="{ color: adjustColor ? adjustColor(themeColor, -40) : themeColor }" style="line-height: 1.5; padding: 0 10px;">
+                💡 {{ idolNagging }}
+            </div>
+        </div>
+
+        <div v-if="statsData.series.length > 0" class="bg-white p-5 rounded-2xl border border-slate-100 text-center pb-8">
+            <h3 class="text-xl font-black text-slate-700 mb-5 uppercase tracking-widest inline-block mx-auto border-b pb-1">🎬 好看一直看</h3>
+            <div class="space-y-3">
+                <div v-for="(item, idx) in statsData.series.slice(0, 3)" :key="item.title" class="bg-slate-50 p-4 rounded-xl flex items-center min-h-[75px] text-left px-5">
+                    <div class="shrink-0 mr-4">
+                        <div v-if="idx === 0" class="text-2xl">🥇</div>
+                        <div v-else-if="idx === 1" class="text-2xl">🥈</div>
+                        <div v-else-if="idx === 2" class="text-2xl">🥉</div>
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center">
+                        <div class="font-bold text-slate-700 text-xs mb-1 line-clamp-2" style="line-height: 1.3;">{{ item.title }}</div>
+                        <div class="font-black text-sm" :style="{ color: themeColor }" style="line-height: 1;">{{ item.count }}場</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="height: 15px;"></div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
                 </div>
                 <div class="space-y-4">
-                 
                     <div class="relative">
-                        <select v-model="selectedYear" class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-8 rounded-xl font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                            <option value="ALL">🗓️ 全部年份總回顧</option>
-                            <option v-for="year in availableYears" :key="year" :value="year">{{ year }} 年度回顧</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><i class="ph ph-caret-down-bold"></i></div>
-                    </div>
+                               <select v-model="selectedYear" 
+                class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-10 rounded-xl font-bold shadow-sm focus:outline-none cursor-pointer relative z-10">
+            <option value="ALL">🗓️ 全部年份總回顧</option>
+            <option v-for="year in availableYears" :key="year" :value="year">{{ year }} 年度回顧</option>
+        </select>
+        
+        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 z-20">
+            <i class="ph ph-caret-down"></i>
+        </div>
+    </div>
          
                     <div v-if="emotionalSummary" class="bg-white p-4 rounded-xl shadow-sm border-l-4" :style="{ borderColor: themeColor }">
                         <p class="text-sm font-bold text-slate-700 italic">"{{ emotionalSummary }}"</p>
@@ -804,53 +890,71 @@
             </div>
         </transition>
 
-        <div v-if="showSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showSettingsModal = false">
-            <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 text-center">
-                <h3 class="font-bold text-lg mb-4 text-slate-700">資料與主題設定 ⚙️</h3>
-                
-                <div class="mb-6 border-b border-slate-100 pb-4">
+<div v-if="showSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showSettingsModal = false">
+    <div class="bg-white rounded-2xl shadow-2xl w-80 flex flex-col max-h-[85vh] overflow-hidden">
+        
+        <div class="flex justify-between items-center p-6 pb-4 shrink-0">
+            <h3 class="font-bold text-lg text-slate-700">系統與主題設定 ⚙️</h3>
+            <button @click="showSettingsModal = false" class="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200 transition-colors">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-6 pr-6 pb-6 custom-popup-scroll">
+            <div class="space-y-6 text-center">
+                <div class="border-b border-slate-100 pb-4">
                     <p class="text-xs font-medium text-slate-500 mb-2">App 標題</p>
                     <input type="text" v-model="customTitle" @change="updateAppTitle" placeholder="追星日記 ✨"
-                           class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-primary/50 focus:border-primary/50">
+                         class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-primary/50">
                 </div>
-                
-   
-              
-                <div class="mb-6">
-                    <p class="text-xs text-slate-400 mb-2">全域主題色</p>
+
+                <div class="border-b border-slate-100 pb-4">
+                    <p class="text-xs font-medium text-slate-500 mb-2">年度追星預算 (TWD)</p>
+                    <input type="number" v-model.number="yearlyBudget" placeholder="例如: 50000"
+                           class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 text-center focus:ring-primary/50">
+                    <p class="text-[10px] text-slate-400 mt-2 italic">※ 設定後，首頁會提醒你是否花太多錢囉！</p>
+                </div>
+
+                <div>
+                    <p class="text-xs text-slate-500 mb-2">全域主題色</p>
                     <div class="grid grid-cols-4 gap-3 mb-3">
-                       
-                        <button v-for="color in presetColors" :key="color" @click="setTheme(color)" class="w-12 h-12 rounded-full shadow-sm transition-transform hover:scale-110 border-2" 
-                            :class="themeColor === color ? 'border-slate-800' : 'border-transparent'" :style="{ backgroundColor: color }"></button>
+                        <button v-for="color in presetColors" :key="color" @click="setTheme(color)" 
+                                class="w-full aspect-square rounded-full shadow-sm transition-transform hover:scale-110 border-2" 
+                                :class="themeColor === color ? 'border-slate-800' : 'border-transparent'" 
+                                :style="{ backgroundColor: color }"></button>
                     </div>
-                    <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl"><span class="text-sm text-slate-500">自訂:</span><input type="color" v-model="themeColor" @input="setTheme(themeColor)" class="w-full h-8 cursor-pointer rounded bg-transparent"></div>
+                    <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl">
+                        <p class="text-sm text-slate-500 shrink-0">自訂:</p>
+                        <input type="color" v-model="themeColor" @input="setTheme(themeColor)" class="w-full h-8 cursor-pointer rounded bg-transparent">
+                    </div>
                 </div>
-                <hr class="border-slate-100 my-4">
-   
-                <div class="mb-4">
-                    <p class="text-xs text-slate-400 mb-2">資料備份與轉移</p>
+
+                <hr class="border-slate-100">
+
+                <div>
+                    <p class="text-xs text-slate-500 mb-2">資料備份與轉移</p>
                     <div class="flex flex-col gap-2">
-                        <button @click="downloadBackup" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200"><i class="ph ph-download-simple text-lg"></i> 備份資料 (下載檔案)</button>
-                        <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer"><i class="ph ph-upload-simple text-lg"></i> 還原資料 (上傳檔案)<input type="file" accept=".json" @change="restoreBackup" class="hidden"></label>
+                        <button @click="downloadBackup" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200">
+                            <i class="ph ph-download-simple text-lg"></i> 備份資料
+                        </button>
+                        <label class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-200 cursor-pointer">
+                            <i class="ph ph-upload-simple text-lg"></i> 還原資料
+                            <input type="file" accept=".json" @change="restoreBackup" class="hidden">
+                        </label>
                     </div>
                 </div>
-             
-  
-               <hr class="border-slate-100 my-4">
 
-                <div class="mt-4 border-t border-slate-100 pt-4 text-xs text-slate-400 text-center">
-                    <p class="inline-block mr-4">當前版本: <span class="font-mono text-slate-800">{{ appVersion }}</span></p>
-                    <button @click="showChangelog" 
-                        class="text-primary hover:underline font-medium text-xs cursor-pointer"
-                        :style="{ color: themeColor }">
-                        📄 查看更新日誌
-                    </button>
-            
+                <hr class="border-slate-100">
+
+                <div class="pt-2 text-[10px] text-slate-400">
+                    <p class="mb-2">當前版本: {{ appVersion }}</p>
+                    <button @click="showChangelog" class="font-medium underline" :style="{ color: themeColor }">📄 查看更新日誌</button>
                 </div>
-
-                <button @click="showSettingsModal = false" class="mt-2 text-sm text-slate-400 hover:text-slate-600">完成</button>
             </div>
         </div>
+    </div>
+</div>
+
         
         <transition name="slide-up">
             <div v-if="showFandomModal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -1065,11 +1169,10 @@
                 const themeColor = ref('#63b3b0'); 
           
  
-                const selectedYear = ref('ALL');
+             const selectedYear = ref(new Date().getFullYear().toString());
                 const expandedEventId = ref(null);
                 const isYearlyPrivacy = ref(true); 
                 const isEventPrivacy = ref(true); 
-                const isStatsPrivacy = ref(true); 
 
                 const isSearching = ref(false);
                 const searchError = ref('');
@@ -1094,6 +1197,22 @@
                 const importJson = ref('');
                 let map = null;
                 let markers = [];
+
+const isStatsPrivacy = ref(true); 
+// 初始化預算，預設 50000
+const yearlyBudget = ref(Number(localStorage.getItem('idolYearlyBudget')) || 50000); 
+
+// 監聽並存入本地儲存
+watch(yearlyBudget, (newVal) => localStorage.setItem('idolYearlyBudget', newVal));
+
+// 級距碎碎念邏輯
+const budgetNagging = computed(() => {
+    const percent = (currentYearExpense.value / yearlyBudget.value) * 100;
+    if (percent >= 100) return "⚠️ 預算炸裂！請開始吃土模式";
+    if (percent >= 80) return "🚨 亮紅燈！再買要喝西北風了";
+    if (percent >= 50) return "💡 預算過半，請謹慎評估行程";
+    return "✨ 預算充裕，記得存錢唷！";
+});
 
 // 計算兩點間的球面距離 (Haversine 公式)
 const calculateKm = (lat1, lon1, lat2, lon2) => {
@@ -1130,9 +1249,11 @@ const filteredMapEventsCount = computed(() => {
 
 // 更新：totalDistance 也要隨著年份變動
 const totalDistance = computed(() => {
-    const baseEvents = selectedMapYear.value === 'ALL' 
+    // 根據統計頁面選擇的年份過濾
+    const targetYear = selectedYear.value;
+    const baseEvents = targetYear === 'ALL' 
         ? events.value 
-        : events.value.filter(e => e.date.startsWith(selectedMapYear.value));
+        : events.value.filter(e => e.date && e.date.startsWith(targetYear));
 
     const validPoints = [...baseEvents]
         .filter(e => e.lat && e.lng)
@@ -1145,7 +1266,7 @@ const totalDistance = computed(() => {
             validPoints[i+1].lat, validPoints[i+1].lng
         );
     }
-    return dist.toFixed(1);
+    return Math.round(dist); // 依照您的要求取整數位
 });
 
 
@@ -1588,13 +1709,17 @@ watch(activeTab, (newTab) => {
                     const y = new Date().getFullYear().toString();
                     return events.value.filter(e => e.date.startsWith(y)).reduce((sum, e) => sum + calculateTotal(e.expenses), 0);
                 });
-                const availableYears = computed(() => {
-                    const years = new Set(events.value.map(e => {
-                        const match = e.date.match(/^(\d{4})/);
-                        return match ? match[1] : null;
-                    }).filter(y => y !== null));
-                    return Array.from(years).sort((a, b) => b - a);
-                });
+const availableYears = computed(() => {
+    const currentYear = new Date().getFullYear().toString();
+    const years = new Set(events.value.map(e => {
+        const match = e.date.match(/^(\d{4})/);
+        return match ? match[1] : null;
+    }).filter(y => y !== null));
+
+    years.add(currentYear); 
+   return Array.from(years).sort((a, b) => b - a);
+});
+
                 const statsData = computed(() => {
                     let targetEvents = events.value;
       
@@ -2157,6 +2282,53 @@ const initMap = () => {
                 const getDay = (d) => new Date(d).getDate();
                 const getMonth = (d) => ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][new Date(d).getMonth()];
                 const getDaysDiff = (d) => Math.ceil((new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0))/(1000*60*60*24));
+
+
+const generateShareImage = () => {
+    const element = document.getElementById('share-template');
+    if (!element) return;
+
+    // 移除 alert 改用 console 紀錄或直接執行，避免手機系統彈窗衝突
+    console.log("正在生成圖片...");
+
+    html2canvas(element, {
+        useCORS: true,
+        scale: 3, 
+        backgroundColor: '#f8fafc',
+        letterRendering: true,
+        onclone: (clonedDoc) => {
+            const clonedElement = clonedDoc.getElementById('share-template');
+            clonedElement.style.top = '0';
+            clonedElement.style.left = '0';
+            clonedElement.style.position = 'relative';
+        }
+    }).then(canvas => {
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${selectedYear.value}_追星成就回顧.png`;
+            
+            // 模擬點擊下載
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // 釋放記憶體
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }, 'image/png');
+    }).catch(err => {
+        console.error("生成失敗:", err);
+    });
+};
+
+
+
+
+
+
+
+
                 const getMapLink = (l) => l ?
                     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l)}` : '#';
                 return {
@@ -2166,7 +2338,7 @@ const initMap = () => {
                   
                     cssVars, greetingMessage, filteredEvents, upcomingCount, currentYearExpense, statsData, presetColors, 
               
-                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog,
+                    openModal, editEvent, closeModal, saveEvent, deleteEvent, toggleSettingsModal, setTheme, updateCustomTheme, processImport, showChangelog, generateShareImage, 
                     toggleExpand, formatMoney, getDay, getMonth, getDaysDiff, getMapLink, 
                     calculateTotal, 
                     addExpenseItem, removeExpenseItem, addChecklistItem, removeChecklistItem, addDefaultChecklist, saveFandoms, addFandom, removeFandom, editFandom, closeFandomModal, openFandomModal, fandoms,
@@ -2176,7 +2348,7 @@ const initMap = () => {
                     isColorLight, isThemeColorLight, headerTextColor, appVersion, changelogContent, calculateFandomDays, fandomMessageStatic, calculateDaysToNextDate, calculateYearsAndDaysSinceDebut, getBirthdayCongrats, 
                     getDebutCongrats,
                     handleFileUpload, 
-selectedMapYear, filteredMapEventsCount, totalDistance, isYearlyPrivacy, isEventPrivacy, isStatsPrivacy, 
+selectedMapYear, filteredMapEventsCount, totalDistance, isYearlyPrivacy, isEventPrivacy, isStatsPrivacy, yearlyBudget, budgetNagging, 
 
                 };
             }
@@ -2184,6 +2356,10 @@ selectedMapYear, filteredMapEventsCount, totalDistance, isYearlyPrivacy, isEvent
     </script>
 </body>
 </html>
+
+
+
+
 
 
 
